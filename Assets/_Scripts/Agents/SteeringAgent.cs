@@ -43,7 +43,7 @@ public class SteeringAgent : Agent
 
     #region [Public Methods]
 
-    public void Move(bool constrainToBound = true)
+    public void Move(bool constrainToBound = false)
     {
         transform.position += _velocity * Time.deltaTime;
         if (_velocity.sqrMagnitude > 0.001f)

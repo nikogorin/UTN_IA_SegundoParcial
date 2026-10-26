@@ -124,7 +124,7 @@ GameObject:
   - component: {fileID: 4238900233896798747}
   - component: {fileID: 6849659490742434424}
   m_Layer: 0
-  m_Name: GO_Bounds
+  m_Name: GO_Bounds_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

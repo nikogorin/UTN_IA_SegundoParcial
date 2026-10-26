@@ -18,7 +18,7 @@ public class FlockingState : State
     {
         Vector3 steering = _agent.GetFlockingSteering();
         _agent.ApplySteering(steering);
-        _agent.Move();
+        _agent.Move(true);
 
         if (_agent.IsDead)
         {

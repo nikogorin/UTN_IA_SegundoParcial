@@ -26,7 +26,7 @@ public class GoingToBaitState : State
 
         Vector3 steering = _agent.GetArriveSteering();
         _agent.ApplySteering(steering);
-        _agent.Move();
+        _agent.Move(true);
 
         if(_agent.IsBaitAssigned && _agent.IsCloseToBait)
         {

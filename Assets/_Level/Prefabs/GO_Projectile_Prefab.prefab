@@ -103,7 +103,7 @@ GameObject:
   - component: {fileID: 5044005466166212208}
   - component: {fileID: 4043964268251706033}
   m_Layer: 13
-  m_Name: GO_Projectile
+  m_Name: GO_Projectile_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

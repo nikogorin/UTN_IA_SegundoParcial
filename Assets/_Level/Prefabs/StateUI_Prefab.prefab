@@ -149,7 +149,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6005381550408683642}
   m_Layer: 11
-  m_Name: StateUI
+  m_Name: StateUI_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

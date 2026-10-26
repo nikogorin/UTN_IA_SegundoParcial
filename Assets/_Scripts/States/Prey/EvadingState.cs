@@ -29,6 +29,6 @@ public class EvadingState : State
 
         Vector3 steering = _agent.GetEvadeSteering();
         _agent.ApplySteering(steering);
-        _agent.Move();
+        _agent.Move(true);
     }
 }
