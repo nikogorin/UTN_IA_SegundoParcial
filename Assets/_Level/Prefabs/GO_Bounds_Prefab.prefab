@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3684573305653727201}
   - component: {fileID: 8125387981455502023}
   - component: {fileID: 4720644042740977272}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -123,7 +123,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4238900233896798747}
   - component: {fileID: 6849659490742434424}
-  m_Layer: 0
+  - component: {fileID: 2761154569139113957}
+  m_Layer: 7
   m_Name: GO_Bounds_Prefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -165,4 +166,19 @@ MonoBehaviour:
   visualizerYOffset: 0
   visualizerRenderer: {fileID: 8125387981455502023}
   worldUnitsPerTile: 2
+  textureSeed: 12345
+  randomizeTextureOffset: 1
   drawGizmos: 1
+--- !u!114 &2761154569139113957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5966967031355240529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4687ae6d1c8cdca4084447083244b9d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FloorZone
+  zoneType: 2

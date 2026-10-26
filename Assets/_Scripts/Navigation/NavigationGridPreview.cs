@@ -20,7 +20,9 @@ public class NavigationGridPreview : MonoBehaviour
     [Header("Gizmos")]
     [SerializeField] private bool drawGridArea = true;
     [SerializeField] private bool drawBlockedNodes = true;
-    [SerializeField, Min(0.01f)] private float nodeGizmoRadius = 0.15f;
+    //[SerializeField, Min(0.01f)] private float nodeGizmoRadius = 0.15f;
+    [SerializeField, Range(0.1f, 1f)] private float nodeGizmoScale = 0.75f;
+    [SerializeField, Min(0.01f)] private float nodeGizmoHeight = 0.1f;
 
     private void OnDrawGizmos()
     {
@@ -33,28 +35,35 @@ public class NavigationGridPreview : MonoBehaviour
             {
                 Vector3 samplePosition = GetSamplePosition(x, z);
 
-                if (!TryGetGroundPosition(samplePosition, out Vector3 nodePosition))
-                {
-                    Gizmos.color = Color.gray;
-                    Gizmos.DrawWireSphere(samplePosition, nodeGizmoRadius);
-                    continue;
-                }
+                bool hasGround = TryGetGroundData(samplePosition, out Vector3 nodePosition, out ZoneType zoneType);
 
-                bool blocked = IsBlocked(nodePosition);
+                Vector3 obstacleCheckPosition = hasGround ? nodePosition : samplePosition;
+
+                bool blocked = IsBlocked(obstacleCheckPosition);
 
                 if (blocked)
                 {
                     if (!drawBlockedNodes)
                         continue;
 
-                    Gizmos.color = Color.red;
-                }
-                else
-                {
-                    Gizmos.color = Color.green;
+                    //Gizmos.color = Color.red;
+                    //Gizmos.DrawSphere(obstacleCheckPosition + Vector3.up * 0.05f, nodeGizmoRadius);
+                    DrawNodeGizmo(obstacleCheckPosition, Color.red, true);
+
+                    continue;
                 }
 
-                Gizmos.DrawSphere(nodePosition + Vector3.up * 0.05f, nodeGizmoRadius);
+                if (!hasGround)
+                {
+                    //Gizmos.color = Color.gray;
+                    //Gizmos.DrawWireSphere(samplePosition, nodeGizmoRadius);
+                    DrawNodeGizmo(samplePosition, Color.black, false);
+                    continue;
+                }
+
+                //Gizmos.color = GetZoneColor(zoneType);
+                //Gizmos.DrawSphere(nodePosition + Vector3.up * 0.05f, nodeGizmoRadius);
+                DrawNodeGizmo(nodePosition, GetZoneColor(zoneType), true);
             }
         }
     }
@@ -70,13 +79,18 @@ public class NavigationGridPreview : MonoBehaviour
         return transform.position + transform.right * localX + transform.forward * localZ;
     }
 
-    private bool TryGetGroundPosition(Vector3 samplePosition, out Vector3 groundPosition)
+    private bool TryGetGroundData(Vector3 samplePosition, out Vector3 groundPosition, out ZoneType zoneType)
     {
         Vector3 rayOrigin = samplePosition + Vector3.up * groundProbeHeight;
-
+        zoneType = ZoneType.Regular;
         if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, groundProbeDistance, groundMask, QueryTriggerInteraction.Ignore))
         {
             groundPosition = hit.point;
+
+            FloorZone zone = hit.collider.GetComponentInParent<FloorZone>();
+            if (zone != null)
+                zoneType = zone.ZoneType;
+
             return true;
         }
 
@@ -107,5 +121,37 @@ public class NavigationGridPreview : MonoBehaviour
         Gizmos.DrawWireCube(Vector3.zero, new Vector3(width, 0.05f, depth));
 
         Gizmos.matrix = previousMatrix;
+    }
+
+    private Vector3 GetNodeGizmoSize()
+    {
+        float horizontalSize = nodeSpacing * nodeGizmoScale;
+
+        return new Vector3(horizontalSize, nodeGizmoHeight, horizontalSize);
+    }
+
+    private void DrawNodeGizmo(Vector3 position, Color color, bool solid)
+    {
+        Vector3 size = GetNodeGizmoSize();
+        Vector3 center = position + Vector3.up * (size.y * 0.5f + 0.02f);
+
+        Gizmos.color = color;
+
+        if (solid)
+            Gizmos.DrawCube(center, size);
+        else
+            Gizmos.DrawWireCube(center, size);
+    }
+
+    private Color GetZoneColor(ZoneType zoneType)
+    {
+        return zoneType switch
+        {
+            ZoneType.Initial => Color.blue,
+            ZoneType.HuntingGround => Color.green,
+            ZoneType.Safe => Color.cyan,
+            ZoneType.Exit => Color.yellow,
+            _ => Color.white
+        };
     }
 }
