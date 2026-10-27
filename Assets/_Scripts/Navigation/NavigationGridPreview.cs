@@ -23,9 +23,19 @@ public class NavigationGridPreview : MonoBehaviour
     //[SerializeField, Min(0.01f)] private float nodeGizmoRadius = 0.15f;
     [SerializeField, Range(0.1f, 1f)] private float nodeGizmoScale = 0.75f;
     [SerializeField, Min(0.01f)] private float nodeGizmoHeight = 0.1f;
+    [SerializeField] private bool drawPreview = true;
+    [SerializeField] private bool drawPreviewInPlayMode = false;
 
     private void OnDrawGizmos()
     {
+        if (!drawPreview)
+            return;
+
+        if (Application.isPlaying && !drawPreviewInPlayMode)
+        {
+            return;
+        }
+
         if (drawGridArea)
             DrawGridArea();
 
