@@ -20,11 +20,12 @@ public class GatherState : State
         _agent.StopMoving();
     }
 
+    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         if (!_agent.HasTargetDead)
         {
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
 
@@ -36,7 +37,7 @@ public class GatherState : State
         if (_currentTime >= _agent.GatherDuration)
         {
             _agent.GatherPreyAgentDead();
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
     }

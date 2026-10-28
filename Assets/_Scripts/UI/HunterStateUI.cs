@@ -21,7 +21,7 @@ public class HunterStateUI : StateUI
             stateText.color = hunterState switch
             {
                 HunterState.Idle => Color.black,
-                HunterState.Patrol => Color.yellow,
+                HunterState.Search => Color.yellow,
                 HunterState.PlacingBait => Color.cyan,
                 HunterState.Attacking => Color.red,
                 HunterState.GoingToGather => Color.green,

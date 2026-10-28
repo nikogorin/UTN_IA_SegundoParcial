@@ -9,6 +9,7 @@ public class AttackState : State
         _agent = hunterAgent;
     }
 
+    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         if(_agent.HasTargetDead)
@@ -19,7 +20,7 @@ public class AttackState : State
 
         if(!_agent.HasTargetAlive)
         {
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
 
@@ -31,7 +32,7 @@ public class AttackState : State
             _agent.MeleeAttack();
             _agent.ResetAttackCooldown();
 
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
         else if(distance <= _agent.RangeAttackRadius)
@@ -40,7 +41,7 @@ public class AttackState : State
             _agent.RangeAttack();
             _agent.ResetAttackCooldown();
 
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
 

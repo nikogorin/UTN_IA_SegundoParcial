@@ -43,6 +43,7 @@ public class NavigationGraph : MonoBehaviour
         BuildGraph();
     }
 
+    #region [Public Methods]
     [ContextMenu("Rebuild Graph")]
     public void BuildGraph()
     {
@@ -51,61 +52,6 @@ public class NavigationGraph : MonoBehaviour
 
         BuildNodes();
         BuildConnections();
-    }
-
-    private void BuildNodes()
-    {
-        for (int x = 0; x < columns; x++)
-        {
-            for (int z = 0; z < rows; z++)
-            {
-                Coordinates coordinates = new(x, z);
-                Vector3 worldPosition = GetWorldPosition(x, z);
-                bool hasGround = TryGetGroundData(worldPosition, out Vector3 groundPosition, out ZoneType zoneType);
-                Vector3 nodePosition = hasGround ? groundPosition : worldPosition;
-
-                bool blocked = hasGround && IsPositionBlockedForAgent(nodePosition);
-
-                NavigationNode node = new(coordinates, nodePosition, zoneType, hasGround, blocked);
-                _grid[x, z] = node;
-
-                if (node.IsWalkable)
-                    _walkableNodes.Add(node);
-            }
-        }
-
-        Debug.Log($"Graph generated: {columns * rows} cells, {_walkableNodes.Count} walkable nodes.");
-    }
-
-    private void BuildConnections()
-    {
-        int connectionCount = 0;
-
-        foreach (NavigationNode node in _walkableNodes)
-        {
-            foreach (Coordinates neighborCoordinates in node.Coordinates.GetAllAdjacentDirections())
-            {
-                NavigationNode neighbor = GetNode(neighborCoordinates);
-
-                if (neighbor == null)
-                    continue;
-
-                if (!neighbor.IsWalkable)
-                    continue;
-
-                if (!HasClearConnection(node, neighbor))
-                    continue;
-
-                int previousCount = node.Neighbors.Count;
-
-                node.AddNeighbor(neighbor);
-
-                if (node.Neighbors.Count > previousCount)
-                    connectionCount++;
-            }
-        }
-
-        Debug.Log($"Graph connections generated: {connectionCount / 2}.");
     }
 
     public NavigationNode GetNode(Coordinates coordinates)
@@ -165,6 +111,79 @@ public class NavigationGraph : MonoBehaviour
         return closestNode;
     }
 
+    public NavigationNode GetRandomNodeInZone(ZoneType zone)
+    {
+        List<NavigationNode> candidates = new();
+        foreach (NavigationNode node in _walkableNodes)
+        {
+            if (node.Zone == zone)
+                candidates.Add(node);
+        }
+
+        if(candidates.Count == 0)
+            return null;
+
+        int randomIndex = Random.Range(0, candidates.Count);
+        return candidates[randomIndex];
+    }
+    #endregion
+
+    #region [Private Methods]
+    private void BuildNodes()
+    {
+        for (int x = 0; x < columns; x++)
+        {
+            for (int z = 0; z < rows; z++)
+            {
+                Coordinates coordinates = new(x, z);
+                Vector3 worldPosition = GetWorldPosition(x, z);
+                bool hasGround = TryGetGroundData(worldPosition, out Vector3 groundPosition, out ZoneType zoneType);
+                Vector3 nodePosition = hasGround ? groundPosition : worldPosition;
+
+                bool blocked = hasGround && IsPositionBlockedForAgent(nodePosition);
+
+                NavigationNode node = new(coordinates, nodePosition, zoneType, hasGround, blocked);
+                _grid[x, z] = node;
+
+                if (node.IsWalkable)
+                    _walkableNodes.Add(node);
+            }
+        }
+
+        Debug.Log($"Graph generated: {columns * rows} cells, {_walkableNodes.Count} walkable nodes.");
+    }
+
+    private void BuildConnections()
+    {
+        int connectionCount = 0;
+
+        foreach (NavigationNode node in _walkableNodes)
+        {
+            foreach (Coordinates neighborCoordinates in node.Coordinates.GetAllAdjacentDirections())
+            {
+                NavigationNode neighbor = GetNode(neighborCoordinates);
+
+                if (neighbor == null)
+                    continue;
+
+                if (!neighbor.IsWalkable)
+                    continue;
+
+                if (!HasClearConnection(node, neighbor))
+                    continue;
+
+                int previousCount = node.Neighbors.Count;
+
+                node.AddNeighbor(neighbor);
+
+                if (node.Neighbors.Count > previousCount)
+                    connectionCount++;
+            }
+        }
+
+        Debug.Log($"Graph connections generated: {connectionCount / 2}.");
+    }
+
     private bool IsInsideGrid(Coordinates coordinates)
     {
         return coordinates.X >= 0 && coordinates.X < columns && coordinates.Y >= 0 && coordinates.Y < rows;
@@ -218,6 +237,9 @@ public class NavigationGraph : MonoBehaviour
         return !Physics.Linecast(start, end, obstacleMask, QueryTriggerInteraction.Ignore);
     }
 
+    #endregion
+
+    #region [Gizmos]
     private void OnDrawGizmos()
     {
         if (!drawGraphGizmos)
@@ -319,4 +341,6 @@ public class NavigationGraph : MonoBehaviour
 
         return a.X > b.X || (a.X == b.X && a.Y > b.Y);
     }
+
+    #endregion
 }

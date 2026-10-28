@@ -1,11 +1,14 @@
 public enum HunterState
 {
     Idle,
-    Patrol,
+    Search,
     PlacingBait,
     Attacking,
     GoingToGather,
-    Gathering
+    Gathering,
+    Flee,
+    Exit,
+    Dead
 }
 
 public enum PreyState

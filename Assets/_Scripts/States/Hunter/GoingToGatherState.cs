@@ -9,11 +9,12 @@ public class GoingToGatherState : State
         _agent = agent;
     }
 
+    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         if (!_agent.HasTargetDead)
         {
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
 

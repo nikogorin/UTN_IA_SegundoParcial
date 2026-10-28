@@ -20,6 +20,7 @@ public class PlacingBaitState : State
         ChannelProgressChanged?.Invoke(0f);
     }
 
+    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         _currentTime += Time.deltaTime;
@@ -33,7 +34,7 @@ public class PlacingBaitState : State
                 Debug.Log("Failed to spawn bait.");
 
             _agent.ResetBaitCooldown();
-            _stateMachine.ChangeState(HunterState.Patrol);
+            _stateMachine.ChangeState(HunterState.Search);
             return;
         }
     }

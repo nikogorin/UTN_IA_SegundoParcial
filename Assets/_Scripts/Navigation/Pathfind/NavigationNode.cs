@@ -15,6 +15,16 @@ public class NavigationNode
 
     public string Name => $"Node {Coordinates}";
 
+    private int _cost = 1;
+    public int Cost
+    {
+        get => _cost;
+        private set
+        {
+            _cost = Mathf.Clamp(value, 1, 5);
+        }
+    }
+
     public NavigationNode(Coordinates coordinates, Vector3 position, ZoneType zone, bool hasGround, bool isBlocked)
     {
         Coordinates = coordinates;
@@ -22,6 +32,7 @@ public class NavigationNode
         Zone = zone;
         HasGround = hasGround;
         IsBlocked = isBlocked;
+        Cost = 1;
     }
 
     public void AddNeighbor(NavigationNode neighbor)

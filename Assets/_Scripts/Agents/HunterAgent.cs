@@ -1,9 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class HunterAgent : SteeringAgent
 {
-    //[SerializeField] private PatrolData patrolData;
-
     [Header("Attack Stats")]
     [SerializeField] private float timeBetweenAttacks = 20f;
     [SerializeField] private float targetDetectionRadius = 10f;
@@ -12,6 +11,11 @@ public class HunterAgent : SteeringAgent
     [SerializeField, Min(0)] private float rangeAttackRadius = 7f;
     [SerializeField] private Projectile projectilePrefab;
     [SerializeField] private Transform spawnPoint;
+
+    [Header("Navigation")]
+    [SerializeField] private AStarPathfinder pathfinder;
+    [SerializeField] private NavigationGraph graph;
+    [SerializeField, Min(0.1f)] private float nodeReachDistance = 0.3f;
 
     [Header("Bait Stats")]
     [SerializeField, Min(0)] private float baitCooldown = 5f;
@@ -37,6 +41,8 @@ public class HunterAgent : SteeringAgent
     private PlacingBaitState _placingBaitState;
     private GatherState _gatherState;
     private double _nextPreyDetection;
+    private List<NavigationNode> _currentPath = new();
+    private int _currentPathIndex;
 
     private readonly Collider[] _preyBuffer = new Collider[16];
 
@@ -63,7 +69,7 @@ public class HunterAgent : SteeringAgent
         _stateMachine.OnStateChanged += _stateUI.SetState;
         _stateUI.SetChannelingSlide(0f);
 
-        //PatrolLoopState patrolState = new(this, patrolData, _stateMachine);
+        SearchState searchState = new(this, graph, _stateMachine);
         _placingBaitState = new(this, _stateMachine);
         AttackState attackState = new(this, _stateMachine);
         GoingToGatherState goingToGatherState = new(this, _stateMachine);
@@ -72,17 +78,21 @@ public class HunterAgent : SteeringAgent
         _placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
         _gatherState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 
-        //_stateMachine.RegisterState(HunterState.Patrol, patrolState);
+        _stateMachine.RegisterState(HunterState.Search, searchState);
         _stateMachine.RegisterState(HunterState.PlacingBait, _placingBaitState);
         _stateMachine.RegisterState(HunterState.Attacking, attackState);
         _stateMachine.RegisterState(HunterState.GoingToGather, goingToGatherState);
         _stateMachine.RegisterState(HunterState.Gathering, _gatherState);
 
-        _stateMachine.ChangeState(HunterState.Patrol);
-
         _timeSinceLastAttack = 0f;
         _currentBaitCooldown = 0f;
     }
+
+    private void Start()
+    {
+        _stateMachine.ChangeState(HunterState.Search);
+    }
+        
 
     void Update()
     {
@@ -114,9 +124,34 @@ public class HunterAgent : SteeringAgent
 
     #region [Public Methods]
 
-    public Vector3 GetSeekSteering(Transform waypoint)
+    public bool SetDestination(Vector3 destination)
     {
-        return Seek(waypoint.position);
+        _currentPath = pathfinder.FindPath(transform.position,destination);
+        _currentPathIndex = 0;
+
+        return _currentPath != null && _currentPath.Count > 0;
+    }
+
+    public bool FollowPath()
+    {
+        if (_currentPath == null || _currentPath.Count == 0)
+            return true;
+
+        SkipReachedNodes();
+
+        if (_currentPathIndex >= _currentPath.Count)
+        {
+            StopMoving();
+            return true;
+        }
+
+        NavigationNode currentNode = _currentPath[_currentPathIndex];
+        Vector3 steering = Seek(currentNode.Position);
+
+        ApplySteering(steering);
+        Move();
+
+        return false;
     }
 
     public void MeleeAttack()
@@ -159,6 +194,13 @@ public class HunterAgent : SteeringAgent
 
         PreyManager.Instance.DespawnAndRespawn(_preyAgentDead);
         _preyAgentDead = null;
+    }
+
+    public void ClearPath()
+    {
+        _currentPath.Clear();
+        _currentPathIndex = 0;
+        StopMoving();
     }
 
     #endregion
@@ -236,6 +278,22 @@ public class HunterAgent : SteeringAgent
         float predictionTime = distance / projectileSpeed;
 
         return target.transform.position + target.Velocity * predictionTime;
+    }
+
+    private void SkipReachedNodes()
+    {
+        while (_currentPathIndex < _currentPath.Count)
+        {
+            Vector3 difference = _currentPath[_currentPathIndex].Position - transform.position;
+            difference.y = 0f;
+
+            if (difference.sqrMagnitude > nodeReachDistance * nodeReachDistance)
+            {
+                break;
+            }
+
+            _currentPathIndex++;
+        }
     }
 
     private void OnDrawGizmos()

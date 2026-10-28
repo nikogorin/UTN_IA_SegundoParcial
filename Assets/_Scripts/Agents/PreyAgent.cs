@@ -211,19 +211,19 @@ public class PreyAgent : SteeringAgent
 
         float closestSqrDistance = float.PositiveInfinity;
 
-        //for (int i = 0; i < count; i++)
-        //{
-        //    if (!_hunterBuffer[i].TryGetComponent(out HunterAgent hunter))
-        //        continue;
+        for (int i = 0; i < count; i++)
+        {
+            if (!_hunterBuffer[i].TryGetComponent(out HunterAgent hunter))
+                continue;
 
-        //    float sqrDistance = (hunter.transform.position - transform.position).sqrMagnitude;
+            float sqrDistance = (hunter.transform.position - transform.position).sqrMagnitude;
 
-        //    if (sqrDistance < closestSqrDistance)
-        //    {
-        //        closestSqrDistance = sqrDistance;
-        //        _hunterAgent = hunter;
-        //    }
-        //}
+            if (sqrDistance < closestSqrDistance)
+            {
+                closestSqrDistance = sqrDistance;
+                _hunterAgent = hunter;
+            }
+        }
     }
 
     private void DetectBait()
