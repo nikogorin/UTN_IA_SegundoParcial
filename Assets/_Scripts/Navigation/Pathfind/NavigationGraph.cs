@@ -96,9 +96,7 @@ public class NavigationGraph : MonoBehaviour
                 continue;
 
             Vector3 difference = node.Position - worldPosition;
-
             difference.y = 0f;
-
             float sqrDistance = difference.sqrMagnitude;
 
             if (sqrDistance >= closestSqrDistance)
@@ -109,6 +107,31 @@ public class NavigationGraph : MonoBehaviour
         }
 
         return closestNode;
+    }
+
+    public NavigationNode GetRandomNodeInZone(Vector3 worldPosition, float minDistance , ZoneType zone)
+    {
+        List<NavigationNode> candidates = new();
+
+        foreach (NavigationNode node in _walkableNodes)
+        {
+            if (node.Zone != zone)
+                continue;
+
+            Vector3 difference = node.Position - worldPosition;
+            difference.y = 0f;
+            float sqrDistance = difference.sqrMagnitude;
+            float sqrMinDistance = minDistance * minDistance;
+
+            if (sqrDistance >= sqrMinDistance)
+                candidates.Add(node);
+        }
+
+        if (candidates.Count == 0)
+            return null;
+
+        int randomIndex = Random.Range(0, candidates.Count);
+        return candidates[randomIndex];
     }
 
     public NavigationNode GetRandomNodeInZone(ZoneType zone)

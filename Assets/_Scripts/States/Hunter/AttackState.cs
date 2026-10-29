@@ -9,7 +9,6 @@ public class AttackState : State
         _agent = hunterAgent;
     }
 
-    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         if(_agent.HasTargetDead)

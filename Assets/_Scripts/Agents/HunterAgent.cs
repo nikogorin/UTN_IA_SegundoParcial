@@ -1,6 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum SearchPhase
+{
+    GoingToHuntingGround,
+    ExploringHuntingGround
+}
+
 public class HunterAgent : SteeringAgent
 {
     [Header("Attack Stats")]
@@ -25,9 +31,15 @@ public class HunterAgent : SteeringAgent
     [SerializeField] private float gatherDetectionRadius = 10f;
     [SerializeField] private float gatherDuration = 3f;
     [SerializeField, Range(0, 2)] private float gatheringDistance = 0.9f;
+    [SerializeField] private int RequiredGathers = 3;
 
     [Header("Check Intervals")]
-    [SerializeField] private float preyDetectionInterval = 0.10f;
+    [SerializeField] private float detectionInterval = 0.10f;
+    [SerializeField] private LayerMask woldLayer;
+
+    [Header("Respawn & Safe Zone (sec)")]
+    [SerializeField] private float RespawnTime = 5f;
+    [SerializeField] private float SafeZoneWaitTime = 2f;
 
     [Header("Gizmos")]
     [SerializeField] private bool drawGizmos = true;
@@ -39,12 +51,13 @@ public class HunterAgent : SteeringAgent
     private float _timeSinceLastAttack;
     private float _currentBaitCooldown;
     private PlacingBaitState _placingBaitState;
-    private GatherState _gatherState;
-    private double _nextPreyDetection;
+    private GatheringState _gatheringState;
+    private double _nextDetection;
     private List<NavigationNode> _currentPath = new();
     private int _currentPathIndex;
-
+    private int _currentPreyGathered;
     private readonly Collider[] _preyBuffer = new Collider[16];
+    private SearchPhase _phase;
 
     public bool CanAttack => HasTargetAlive && IsReadyToAttack;
     public bool HasTargetAlive => _preyAgentAlive != null;
@@ -57,9 +70,12 @@ public class HunterAgent : SteeringAgent
     public bool IsCloseToGather => _preyAgentDead != null ? Vector3.Distance(transform.position, _preyAgentDead.transform.position) <= gatheringDistance : false;
     public float PlacingBaitDelay => placingBaitDelay;
     public bool CanPlaceBait => _currentBaitCooldown >= baitCooldown;
+    public SearchPhase Phase => _phase;
+    public bool IsOnHunterGround => _phase == SearchPhase.ExploringHuntingGround;
+    public bool RequiredGatheredCompleted => _currentPreyGathered >= RequiredGathers;
 
     #region [Unity Events]
-    
+
     protected override void Awake()
     {
         base.Awake();
@@ -69,20 +85,24 @@ public class HunterAgent : SteeringAgent
         _stateMachine.OnStateChanged += _stateUI.SetState;
         _stateUI.SetChannelingSlide(0f);
 
+        StartingState startingState = new(this, graph, _stateMachine);
         SearchState searchState = new(this, graph, _stateMachine);
         _placingBaitState = new(this, _stateMachine);
         AttackState attackState = new(this, _stateMachine);
         GoingToGatherState goingToGatherState = new(this, _stateMachine);
-        _gatherState = new(this, _stateMachine);
+        _gatheringState = new(this, _stateMachine);
+        ExitState exitState = new(this, graph, _stateMachine);
 
         _placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
-        _gatherState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
+        _gatheringState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 
+        _stateMachine.RegisterState(HunterState.Starting, startingState);
         _stateMachine.RegisterState(HunterState.Search, searchState);
         _stateMachine.RegisterState(HunterState.PlacingBait, _placingBaitState);
         _stateMachine.RegisterState(HunterState.Attacking, attackState);
         _stateMachine.RegisterState(HunterState.GoingToGather, goingToGatherState);
-        _stateMachine.RegisterState(HunterState.Gathering, _gatherState);
+        _stateMachine.RegisterState(HunterState.Gathering, _gatheringState);
+        _stateMachine.RegisterState(HunterState.Exit, exitState);
 
         _timeSinceLastAttack = 0f;
         _currentBaitCooldown = 0f;
@@ -90,7 +110,7 @@ public class HunterAgent : SteeringAgent
 
     private void Start()
     {
-        _stateMachine.ChangeState(HunterState.Search);
+        _stateMachine.ChangeState(HunterState.Starting);
     }
         
 
@@ -98,10 +118,10 @@ public class HunterAgent : SteeringAgent
     {
         double now = Time.timeAsDouble;
 
-        if (now >= _nextPreyDetection)
+        if (now >= _nextDetection)
         {
-            _nextPreyDetection = now + preyDetectionInterval;
-            DetectPrey();
+            _nextDetection = now + detectionInterval;
+            PerformDetection();
         }
 
         UpdateAttackTime();
@@ -116,7 +136,7 @@ public class HunterAgent : SteeringAgent
         {
             _stateMachine.OnStateChanged -= _stateUI.SetState;
             _placingBaitState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
-            _gatherState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
+            _gatheringState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
         }
     }
 
@@ -126,7 +146,7 @@ public class HunterAgent : SteeringAgent
 
     public bool SetDestination(Vector3 destination)
     {
-        _currentPath = pathfinder.FindPath(transform.position,destination);
+        _currentPath = pathfinder.FindPath(transform.position, destination);
         _currentPathIndex = 0;
 
         return _currentPath != null && _currentPath.Count > 0;
@@ -150,6 +170,9 @@ public class HunterAgent : SteeringAgent
 
         ApplySteering(steering);
         Move();
+
+        // Replace if the teacher confirm that I cannot use Seek();
+        //MoveTowardsPoint(currentNode.Position);
 
         return false;
     }
@@ -194,6 +217,8 @@ public class HunterAgent : SteeringAgent
 
         PreyManager.Instance.DespawnAndRespawn(_preyAgentDead);
         _preyAgentDead = null;
+        _currentPreyGathered++;
+        _stateUI.IncreaseGatherText();
     }
 
     public void ClearPath()
@@ -203,12 +228,21 @@ public class HunterAgent : SteeringAgent
         StopMoving();
     }
 
+    public void SetSearchPhase(SearchPhase searchPhase)
+    {
+        _phase = searchPhase;
+    }
+
     #endregion
 
     #region [Private Methods]
 
-    private void DetectPrey()
+    private void PerformDetection()
     {
+        // Cambiar para detectar lobos
+        if (!IsOnHunterGround)
+            return;
+
         float detectionRadius = Mathf.Max(targetDetectionRadius, gatherDetectionRadius);
 
         int count = Physics.OverlapSphereNonAlloc(transform.position, detectionRadius, _preyBuffer, preyLayer, QueryTriggerInteraction.Ignore);

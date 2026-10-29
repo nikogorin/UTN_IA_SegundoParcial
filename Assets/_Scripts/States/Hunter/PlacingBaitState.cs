@@ -20,7 +20,6 @@ public class PlacingBaitState : State
         ChannelProgressChanged?.Invoke(0f);
     }
 
-    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         _currentTime += Time.deltaTime;

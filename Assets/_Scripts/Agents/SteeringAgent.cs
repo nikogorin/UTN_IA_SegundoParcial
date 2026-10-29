@@ -73,6 +73,24 @@ public class SteeringAgent : Agent
         _velocity = Vector3.zero;
     }
 
+    public void MoveTowardsPoint(Vector3 targetPosition)
+    {
+        Vector3 currentPosition = transform.position;
+
+        targetPosition.y = currentPosition.y;
+
+        Vector3 nextPosition = Vector3.MoveTowards(currentPosition,targetPosition,speed * Time.deltaTime);
+        Vector3 movement = nextPosition - currentPosition;
+
+        if (Time.deltaTime > 0f)
+            _velocity = movement / Time.deltaTime;
+
+        transform.position = nextPosition;
+
+        if (movement.sqrMagnitude > 0.001f)
+            transform.forward = movement.normalized;
+    }
+
     #endregion
 
     #region [Private Methods]

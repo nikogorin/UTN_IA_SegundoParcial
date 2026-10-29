@@ -1,5 +1,6 @@
 public enum HunterState
 {
+    Starting,
     Idle,
     Search,
     PlacingBait,

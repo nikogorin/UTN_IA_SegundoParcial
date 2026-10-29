@@ -1,14 +1,14 @@
 ﻿using System;
 using UnityEngine;
 
-public class GatherState : State
+public class GatheringState : State
 {
     private readonly HunterAgent _agent;
     private float _currentTime = 0;
 
     public event Action<float> ChannelProgressChanged;
 
-    public GatherState(HunterAgent agent, StateMachine stateMachine) : base(stateMachine)
+    public GatheringState(HunterAgent agent, StateMachine stateMachine) : base(stateMachine)
     {
         _agent = agent;
     }
@@ -20,7 +20,6 @@ public class GatherState : State
         _agent.StopMoving();
     }
 
-    //Revisar comportamientos de estados hacia HunterState.Search
     public override void Update()
     {
         if (!_agent.HasTargetDead)
@@ -37,7 +36,8 @@ public class GatherState : State
         if (_currentTime >= _agent.GatherDuration)
         {
             _agent.GatherPreyAgentDead();
-            _stateMachine.ChangeState(HunterState.Search);
+            var stateToChange = _agent.RequiredGatheredCompleted ? HunterState.Exit : HunterState.Search;
+            _stateMachine.ChangeState(stateToChange);
             return;
         }
     }
