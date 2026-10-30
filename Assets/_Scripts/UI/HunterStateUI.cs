@@ -14,12 +14,12 @@ public class HunterStateUI : StateUI
     [SerializeField] private Image channelingSlideImage;
 
     private string internalGatherIndicator = "|";
-    private bool wasCalledBefore = false;
-
+    
     private void Start()
     {
         gatherText.enabled = false;
     }
+
     public override void SetState(Enum state)
     {
         if (state is HunterState hunterState)
@@ -43,17 +43,27 @@ public class HunterStateUI : StateUI
         }
     }
 
-    public void IncreaseGatherText()
+    public void SetGatherCount(int gatherCount)
     {
-        if(!wasCalledBefore)
+        if (gatherCount < 0)
+            return;
+        else if (gatherCount == 0)
+        {
+            gatherText.enabled = false;
+            gatherText.text = string.Empty;
+            return;
+        }
+        else if (gatherCount == 1)
         {
             gatherText.enabled = true;
             gatherText.text = $"{internalGatherIndicator}";
-            wasCalledBefore = true;
             return;
         }
-        gatherText.text += $" {internalGatherIndicator}";
-
+        else
+        {
+            gatherText.text += $" {internalGatherIndicator}";
+            return;
+        }
     }
 
     public void SetAttackCooldown(float amount)

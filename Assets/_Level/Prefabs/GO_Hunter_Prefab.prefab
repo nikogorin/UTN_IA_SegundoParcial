@@ -572,7 +572,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5232027431523502777}
@@ -627,7 +627,7 @@ MonoBehaviour:
   targetDetectionRadius: 10
   preyLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 2048
   meleeAttackRadius: 1
   rangeAttackRadius: 7
   projectilePrefab: {fileID: 4043964268251706033, guid: 98b6af2dd3d58d346bf5a3683bbf1ab3, type: 3}
@@ -642,12 +642,26 @@ MonoBehaviour:
   gatheringDistance: 1.5
   RequiredGathers: 3
   detectionInterval: 0.1
-  woldLayer:
+  wolfLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 512
   RespawnTime: 5
   SafeZoneWaitTime: 2
+  eyeHeight: 1
+  viewAngle: 360
+  targetMask:
+    serializedVersion: 2
+    m_Bits: 1536
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 256
   drawGizmos: 1
+  drawCurrentPath: 1
+  pathColor: {r: 0, g: 0.19680595, b: 1, a: 1}
+  currentNodeColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  destinationNodeColor: {r: 0, g: 1, b: 0, a: 1}
+  pathNodeSize: 0.35
+  pathHeightOffset: 0.3
 --- !u!114 &6589151460542105398
 MonoBehaviour:
   m_ObjectHideFlags: 0

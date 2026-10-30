@@ -6,7 +6,8 @@ public class ExitState : State
 {
     private readonly HunterAgent _agent;
     private readonly NavigationGraph _graph;
-
+    private readonly float _timeUntilResetCycle = 2f;
+    private float _currentTime = 0;
     public ExitState(HunterAgent hunterAgent, NavigationGraph graph, StateMachine stateMachine) : base(stateMachine)
     {
         _agent = hunterAgent;
@@ -17,6 +18,7 @@ public class ExitState : State
     {
         NavigationNode destination = _graph.GetClosestNodeInZone(_agent.transform.position, ZoneType.Exit);
         TrySetDestination(destination);
+        _currentTime = 0f;
     }
 
     public override void Update()
@@ -26,7 +28,21 @@ public class ExitState : State
         if (!arrived)
             return;
 
-        Debug.Log("Arrived to Exit Zone... Wait to Exit (?)");
+        _agent.StopMoving();
+        _currentTime += Time.deltaTime;
+
+        if (_currentTime > _timeUntilResetCycle )
+        {
+            NavigationNode initialNode = _graph.GetRandomNodeInZone(ZoneType.Initial);
+            if (initialNode == null)
+            {
+                Debug.LogError("No Initial zone node was found.");
+                return;
+            }
+
+            _agent.ResetSimulationCycle(initialNode.Position);
+            _stateMachine.ChangeState(HunterState.Starting);
+        }
     }
 
     public override void Exit()

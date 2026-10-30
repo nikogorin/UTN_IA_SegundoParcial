@@ -7,6 +7,10 @@ public class AStarPathfinder : MonoBehaviour
 {
     [SerializeField] private NavigationGraph graph;
     [SerializeField] private HeuristicMethod heuristicMethod = HeuristicMethod.Manhattan;
+    [SerializeField] private bool smoothPath = true;
+    [SerializeField] private LayerMask obstacleMask;
+    [SerializeField, Min(0f)] private float agentRadius = 0.4f;
+    [SerializeField, Min(0f)] private float castHeight = 0.5f;
 
     public List<NavigationNode> FindPath(Vector3 startPosition, Vector3 targetPosition)
     {
@@ -45,9 +49,16 @@ public class AStarPathfinder : MonoBehaviour
                 continue;
 
             if (current == targetNode)
-                return ReconstructPath(cameFrom, targetNode);
+            {
+                List<NavigationNode> path = ReconstructPath(cameFrom, targetNode);
 
-            foreach(NavigationNode neighbor in current.Neighbors)
+                if (smoothPath)
+                    path = SmoothPath(path);
+
+                return path;
+            }
+
+            foreach (NavigationNode neighbor in current.Neighbors)
             {
                 float newCost = costSoFar[current] + GetMovementCost(current, neighbor);
                 bool wasVisited = costSoFar.TryGetValue(neighbor, out float previousCost);
@@ -83,6 +94,48 @@ public class AStarPathfinder : MonoBehaviour
             HeuristicMethod.Manhattan => (deltaX + deltaY) * graph.NodeSpacing,
             _ => Mathf.Sqrt(deltaX * deltaX + deltaY * deltaY) * graph.NodeSpacing
         };
+    }
+
+    private List<NavigationNode> SmoothPath(List<NavigationNode> path)
+    {
+        if (path == null || path.Count <= 3)
+            return path;
+
+        List<NavigationNode> smoothPath = new() { path[0] };
+        int anchorIndex = 0;
+
+        while (anchorIndex < path.Count - 1)
+        {
+            int nextIndex = anchorIndex + 1;
+
+            for (int i = path.Count - 1; i > anchorIndex + 1; i--)
+            {
+                if (HasLineOfSight(path[anchorIndex].Position, path[i].Position))
+                {
+                    nextIndex = i;
+                    break;
+                }
+            }
+
+            smoothPath.Add(path[nextIndex]);
+            anchorIndex = nextIndex;
+        }
+
+        return smoothPath;
+    }
+
+    private bool HasLineOfSight(Vector3 from, Vector3 to)
+    {
+        from += Vector3.up * castHeight;
+        to += Vector3.up * castHeight;
+
+        Vector3 direction = to - from;
+        float distance = direction.magnitude;
+
+        if (distance < 0.0001f)
+            return true;
+
+        return !Physics.SphereCast(from, agentRadius, direction.normalized, out _, distance, obstacleMask);
     }
 
     private List<NavigationNode> ReconstructPath(Dictionary<NavigationNode, NavigationNode> cameFrom, NavigationNode targetNode)

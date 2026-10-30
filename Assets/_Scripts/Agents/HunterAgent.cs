@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -35,14 +36,26 @@ public class HunterAgent : SteeringAgent
 
     [Header("Check Intervals")]
     [SerializeField] private float detectionInterval = 0.10f;
-    [SerializeField] private LayerMask woldLayer;
+    [SerializeField] private LayerMask wolfLayer;
 
     [Header("Respawn & Safe Zone (sec)")]
     [SerializeField] private float RespawnTime = 5f;
     [SerializeField] private float SafeZoneWaitTime = 2f;
 
+    [Header("Field of view")]
+    [SerializeField] protected float eyeHeight = 1f;
+    [SerializeField, Range(0f, 360f)] protected float viewAngle = 360f;
+    [SerializeField] protected LayerMask targetMask = ~0;
+    [SerializeField] protected LayerMask obstacleMask = ~0;
+
     [Header("Gizmos")]
     [SerializeField] private bool drawGizmos = true;
+    [SerializeField] private bool drawCurrentPath = true;
+    [SerializeField] private Color pathColor = Color.magenta;
+    [SerializeField] private Color currentNodeColor = Color.yellow;
+    [SerializeField] private Color destinationNodeColor = Color.green;
+    [SerializeField, Min(0.01f)] private float pathNodeSize = 0.35f;
+    [SerializeField, Min(0f)] private float pathHeightOffset = 0.3f;
 
     private StateMachine _stateMachine;
     private HunterStateUI _stateUI;
@@ -166,13 +179,10 @@ public class HunterAgent : SteeringAgent
         }
 
         NavigationNode currentNode = _currentPath[_currentPathIndex];
-        Vector3 steering = Seek(currentNode.Position);
 
+        Vector3 steering = Arrive(currentNode.Position); // Or Seek depend of the orbit effect
         ApplySteering(steering);
         Move();
-
-        // Replace if the teacher confirm that I cannot use Seek();
-        //MoveTowardsPoint(currentNode.Position);
 
         return false;
     }
@@ -218,7 +228,7 @@ public class HunterAgent : SteeringAgent
         PreyManager.Instance.DespawnAndRespawn(_preyAgentDead);
         _preyAgentDead = null;
         _currentPreyGathered++;
-        _stateUI.IncreaseGatherText();
+        _stateUI.SetGatherCount(_currentPreyGathered);
     }
 
     public void ClearPath()
@@ -233,6 +243,27 @@ public class HunterAgent : SteeringAgent
         _phase = searchPhase;
     }
 
+    public void ResetSimulationCycle(Vector3 spawnPosition)
+    {
+        ClearPath();
+
+        transform.position = spawnPosition;
+        transform.rotation = Quaternion.identity;
+
+        _preyAgentAlive = null;
+        _preyAgentDead = null;
+
+        _currentPreyGathered = 0;
+        _timeSinceLastAttack = 0f;
+        _currentBaitCooldown = 0f;
+
+        _nextDetection = Time.timeAsDouble + detectionInterval;
+
+        SetSearchPhase(SearchPhase.GoingToHuntingGround);
+
+        _stateUI.SetGatherCount(_currentPreyGathered);
+    }
+
     #endregion
 
     #region [Private Methods]
@@ -243,9 +274,8 @@ public class HunterAgent : SteeringAgent
         if (!IsOnHunterGround)
             return;
 
-        float detectionRadius = Mathf.Max(targetDetectionRadius, gatherDetectionRadius);
-
-        int count = Physics.OverlapSphereNonAlloc(transform.position, detectionRadius, _preyBuffer, preyLayer, QueryTriggerInteraction.Ignore);
+        float maxDetectionRadius = Mathf.Max(targetDetectionRadius, gatherDetectionRadius);
+        int count = Physics.OverlapSphereNonAlloc(transform.position, maxDetectionRadius, _preyBuffer, preyLayer, QueryTriggerInteraction.Ignore);
 
         PreyAgent closestAlive = null;
         PreyAgent closestDead = null;
@@ -259,6 +289,11 @@ public class HunterAgent : SteeringAgent
         for (int i = 0; i < count; i++)
         {
             if (!_preyBuffer[i].TryGetComponent(out PreyAgent prey))
+                continue;
+
+            float perceptionRadius = prey.IsDead ? gatherDetectionRadius : targetDetectionRadius;
+            bool canSee = FieldOfViewUtility.CanSee(transform, prey.transform, perceptionRadius, viewAngle, eyeHeight, obstacleMask);
+            if (!canSee)
                 continue;
 
             float sqrDistance = (prey.transform.position - transform.position).sqrMagnitude;
@@ -330,6 +365,9 @@ public class HunterAgent : SteeringAgent
         }
     }
 
+    #endregion
+
+    #region [Gizmos]
     private void OnDrawGizmos()
     {
         if (!drawGizmos) return;
@@ -342,7 +380,52 @@ public class HunterAgent : SteeringAgent
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, targetDetectionRadius);
+
+        if (drawCurrentPath)
+            DrawCurrentPath();
     }
 
+    private void DrawCurrentPath()
+    {
+        if (_currentPath == null || _currentPath.Count == 0)
+        {
+            return;
+        }
+
+        if (_currentPathIndex >= _currentPath.Count)
+            return;
+
+        Vector3 offset = Vector3.up * pathHeightOffset;
+        Vector3 previousPosition = transform.position + offset;
+
+        for (int i = _currentPathIndex; i < _currentPath.Count; i++)
+        {
+            NavigationNode node = _currentPath[i];
+
+            if (node == null)
+                continue;
+
+            Vector3 nodePosition = node.Position + offset;
+
+            Gizmos.color = pathColor;
+            Gizmos.DrawLine(previousPosition, nodePosition);
+
+            if (i == _currentPathIndex)
+            {
+                Gizmos.color = currentNodeColor;
+            }
+            else if (i == _currentPath.Count - 1)
+            {
+                Gizmos.color = destinationNodeColor;
+            }
+            else
+            {
+                Gizmos.color = pathColor;
+            }
+
+            Gizmos.DrawCube(nodePosition, Vector3.one * pathNodeSize);
+            previousPosition = nodePosition;
+        }
+    }
     #endregion
 }
