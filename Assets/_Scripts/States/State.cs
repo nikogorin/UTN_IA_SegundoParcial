@@ -21,6 +21,13 @@ public enum PreyState
     Dead
 }
 
+public enum WolfState
+{
+    Patrol,
+    Chase,
+    Investigate
+}
+
 public abstract class State
 {
     protected StateMachine _stateMachine;

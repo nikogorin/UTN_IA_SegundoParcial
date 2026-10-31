@@ -6,7 +6,6 @@ public class ExitState : State
 {
     private readonly HunterAgent _agent;
     private readonly NavigationGraph _graph;
-    private readonly float _timeUntilResetCycle = 2f;
     private float _currentTime = 0;
     public ExitState(HunterAgent hunterAgent, NavigationGraph graph, StateMachine stateMachine) : base(stateMachine)
     {
@@ -31,7 +30,7 @@ public class ExitState : State
         _agent.StopMoving();
         _currentTime += Time.deltaTime;
 
-        if (_currentTime > _timeUntilResetCycle )
+        if (_currentTime > _agent.SafeZoneWaitTime )
         {
             NavigationNode initialNode = _graph.GetRandomNodeInZone(ZoneType.Initial);
             if (initialNode == null)
@@ -41,7 +40,7 @@ public class ExitState : State
             }
 
             _agent.ResetSimulationCycle(initialNode.Position);
-            _stateMachine.ChangeState(HunterState.Starting);
+            _stateMachine.ChangeState(HunterState.Search);
         }
     }
 

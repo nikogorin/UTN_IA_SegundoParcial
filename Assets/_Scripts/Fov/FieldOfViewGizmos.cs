@@ -113,4 +113,16 @@ public class FieldOfViewGizmos : MonoBehaviour
                 targets.Add(prey.transform);
         }
     }
+
+    [ContextMenu("Find All Hunter")]
+    private void FindAllHunter()
+    {
+        targets.Clear();
+        HunterAgent[] hunterAgents = FindObjectsByType<HunterAgent>(FindObjectsSortMode.None);
+        foreach (HunterAgent prey in hunterAgents)
+        {
+            if (prey != null)
+                targets.Add(prey.transform);
+        }
+    }
 }

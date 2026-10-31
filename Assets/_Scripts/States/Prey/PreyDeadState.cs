@@ -1,7 +1,7 @@
-﻿public class DeadState : State
+﻿public class PreyDeadState : State
 {
     private PreyAgent _agent;
-    public DeadState(StateMachine stateMachine, PreyAgent agent) : base(stateMachine)
+    public PreyDeadState(StateMachine stateMachine, PreyAgent agent) : base(stateMachine)
     {
         _agent = agent;
     }

@@ -80,7 +80,7 @@ public class PreyAgent : SteeringAgent
         EvadingState evadingState = new(_stateMachine, this);
         GoingToBaitState goingToBaitState = new(_stateMachine, this);
         _eatingState = new(_stateMachine, this);
-        DeadState deadState = new(_stateMachine, this);
+        PreyDeadState deadState = new(_stateMachine, this);
 
         _eatingState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 

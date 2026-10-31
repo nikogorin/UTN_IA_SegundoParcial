@@ -39,8 +39,8 @@ public class HunterAgent : SteeringAgent
     [SerializeField] private LayerMask wolfLayer;
 
     [Header("Respawn & Safe Zone (sec)")]
-    [SerializeField] private float RespawnTime = 5f;
-    [SerializeField] private float SafeZoneWaitTime = 2f;
+    [SerializeField] private float respawnTime = 5f;
+    [SerializeField] private float safeZoneWaitTime = 2f;
 
     [Header("Field of view")]
     [SerializeField] protected float eyeHeight = 1f;
@@ -86,6 +86,8 @@ public class HunterAgent : SteeringAgent
     public SearchPhase Phase => _phase;
     public bool IsOnHunterGround => _phase == SearchPhase.ExploringHuntingGround;
     public bool RequiredGatheredCompleted => _currentPreyGathered >= RequiredGathers;
+    public float RespawnTime => respawnTime;
+    public float SafeZoneWaitTime => safeZoneWaitTime;
 
     #region [Unity Events]
 
@@ -98,23 +100,25 @@ public class HunterAgent : SteeringAgent
         _stateMachine.OnStateChanged += _stateUI.SetState;
         _stateUI.SetChannelingSlide(0f);
 
-        StartingState startingState = new(this, graph, _stateMachine);
+        //StartingState startingState = new(this, graph, _stateMachine);
         SearchState searchState = new(this, graph, _stateMachine);
         _placingBaitState = new(this, _stateMachine);
         AttackState attackState = new(this, _stateMachine);
         GoingToGatherState goingToGatherState = new(this, _stateMachine);
         _gatheringState = new(this, _stateMachine);
+        HunterDeadState deadState = new(this, graph, _stateMachine);
         ExitState exitState = new(this, graph, _stateMachine);
 
         _placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
         _gatheringState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 
-        _stateMachine.RegisterState(HunterState.Starting, startingState);
+        //_stateMachine.RegisterState(HunterState.Starting, startingState);
         _stateMachine.RegisterState(HunterState.Search, searchState);
         _stateMachine.RegisterState(HunterState.PlacingBait, _placingBaitState);
         _stateMachine.RegisterState(HunterState.Attacking, attackState);
         _stateMachine.RegisterState(HunterState.GoingToGather, goingToGatherState);
         _stateMachine.RegisterState(HunterState.Gathering, _gatheringState);
+        _stateMachine.RegisterState(HunterState.Dead, deadState);
         _stateMachine.RegisterState(HunterState.Exit, exitState);
 
         _timeSinceLastAttack = 0f;
@@ -123,7 +127,10 @@ public class HunterAgent : SteeringAgent
 
     private void Start()
     {
-        _stateMachine.ChangeState(HunterState.Starting);
+        SetSearchPhase(SearchPhase.GoingToHuntingGround);
+        _stateMachine.ChangeState(HunterState.Search);
+
+        WolfManager.Instance.HunterCaptured += HandleCaptured;
     }
         
 
@@ -151,6 +158,12 @@ public class HunterAgent : SteeringAgent
             _placingBaitState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
             _gatheringState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
         }
+    }
+
+    private void OnDisable()
+    {
+        if (WolfManager.Instance != null)
+            WolfManager.Instance.HunterCaptured -= HandleCaptured;
     }
 
     #endregion
@@ -260,7 +273,6 @@ public class HunterAgent : SteeringAgent
         _nextDetection = Time.timeAsDouble + detectionInterval;
 
         SetSearchPhase(SearchPhase.GoingToHuntingGround);
-
         _stateUI.SetGatherCount(_currentPreyGathered);
     }
 
@@ -363,6 +375,13 @@ public class HunterAgent : SteeringAgent
 
             _currentPathIndex++;
         }
+    }
+
+    private void HandleCaptured()
+    {
+        ClearPath();
+        StopMoving();
+        _stateMachine.ChangeState(HunterState.Dead);
     }
 
     #endregion
