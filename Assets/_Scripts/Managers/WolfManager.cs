@@ -1,11 +1,12 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class WolfManager : MonoBehaviour
 {
     public static WolfManager Instance { get; private set; }
-    public event Action HunterCaptured;
+    public event Action HunterKilled;
+    public event Action<Vector3, int> HunterDetected;
+    public event Action HunterEnteredSafeZone;
 
     private void Awake()
     {
@@ -19,8 +20,18 @@ public class WolfManager : MonoBehaviour
         }
     }
 
-    public void RaiseHunterCaptured()
+    public void RaiseHunterKilled()
     {
-        HunterCaptured?.Invoke();
+        HunterKilled?.Invoke();
+    }
+
+    public void RaiseHunterAlertDetection(Vector3 hunterPosition, int detectingWolfId)
+    {
+        HunterDetected?.Invoke(hunterPosition, detectingWolfId);
+    }
+
+    public void RaiseHunterEnteredSafeZone()
+    {
+        HunterEnteredSafeZone?.Invoke();
     }
 }

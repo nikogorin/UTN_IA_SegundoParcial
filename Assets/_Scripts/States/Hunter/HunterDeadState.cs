@@ -14,9 +14,9 @@ public class HunterDeadState : State
 
     public override void Enter()
     {
+        _agent.SetDeadPresentation(true);
         _agent.StopMoving();
         _currentDeadTime = 0f;
-        Debug.Log("Hunter captured");
     }
 
     public override void Update()
@@ -32,6 +32,7 @@ public class HunterDeadState : State
             return;
         }
         _agent.ResetSimulationCycle(initialNode.Position);
+        _agent.SetDeadPresentation(false);
         _stateMachine.ChangeState(HunterState.Search);
     }
 }

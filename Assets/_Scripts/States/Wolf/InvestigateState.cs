@@ -6,6 +6,7 @@ public class InvestigateState : State
     private float _searchTimer;
     private const float SearchDuration = 2f;
     private bool _hasPath;
+    private Vector3 _investigationTarget;
 
     public InvestigateState(WolfAgent agent, StateMachine stateMachine) : base(stateMachine)
     {
@@ -15,11 +16,18 @@ public class InvestigateState : State
     public override void Enter()
     {
         _searchTimer = 0f;
-        _hasPath = _agent.HasLastKnownHunterPosition && _agent.SetDestination(_agent.LastKnownHunterPosition);
+        UpdateInvestigationPath();
     }
 
     public override void Update()
     {
+        if (_agent.HasLastKnownHunterPosition)
+        {
+            float differenceSqr = (_agent.LastKnownHunterPosition - _investigationTarget).sqrMagnitude;
+            if (differenceSqr > 0.01f)
+                UpdateInvestigationPath();
+        }
+
         if (_agent.IsHunterInSafeZone())
         {
             _agent.AbandonHunterTrail();
@@ -57,5 +65,17 @@ public class InvestigateState : State
     {
         _agent.ForgetLastKnownHunterPosition();
         _stateMachine.ChangeState(WolfState.Patrol);
+    }
+
+    private void UpdateInvestigationPath()
+    {
+        if (!_agent.HasLastKnownHunterPosition)
+        {
+            _hasPath = false;
+            return;
+        }
+
+        _investigationTarget = _agent.LastKnownHunterPosition;
+        _hasPath = _agent.SetDestination(_investigationTarget);
     }
 }

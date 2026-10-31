@@ -633,21 +633,22 @@ MonoBehaviour:
   rangeAttackRadius: 7
   projectilePrefab: {fileID: 4043964268251706033, guid: 98b6af2dd3d58d346bf5a3683bbf1ab3, type: 3}
   spawnPoint: {fileID: 7764649897672465081}
-  pathfinder: {fileID: 0}
-  graph: {fileID: 0}
-  nodeReachDistance: 0.8
   baitCooldown: 5
   placingBaitDelay: 3
   gatherDetectionRadius: 10
   gatherDuration: 2
   gatheringDistance: 1.5
   RequiredGathers: 3
+  pathfinder: {fileID: 0}
+  graph: {fileID: 0}
+  nodeReachDistance: 0.8
   detectionInterval: 0.1
   wolfLayer:
     serializedVersion: 2
     m_Bits: 512
   respawnTime: 5
   safeZoneWaitTime: 10
+  exitRespawnDelay: 5
   eyeHeight: 1
   viewAngle: 360
   targetMask:
@@ -656,6 +657,7 @@ MonoBehaviour:
   obstacleMask:
     serializedVersion: 2
     m_Bits: 256
+  visualRoot: {fileID: 4886464517912825859}
   drawGizmos: 1
   drawCurrentPath: 1
   pathColor: {r: 0, g: 0.19680595, b: 1, a: 1}
@@ -1024,6 +1026,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9fb624060c0060945b019ec2fd592f0c, type: 3}
+--- !u!1 &4886464517912825859 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 9fb624060c0060945b019ec2fd592f0c, type: 3}
+  m_PrefabInstance: {fileID: 5697436463641374034}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5232027431523502777 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9fb624060c0060945b019ec2fd592f0c, type: 3}

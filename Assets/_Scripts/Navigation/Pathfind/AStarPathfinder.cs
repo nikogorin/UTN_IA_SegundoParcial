@@ -12,15 +12,50 @@ public class AStarPathfinder : MonoBehaviour
     [SerializeField, Min(0f)] private float agentRadius = 0.4f;
     [SerializeField, Min(0f)] private float castHeight = 0.5f;
 
-    public List<NavigationNode> FindPath(Vector3 startPosition, Vector3 targetPosition)
+    public List<NavigationNode> FindPath(Vector3 startPosition, Vector3 targetPosition, bool avoidSafeZones)
     {
         NavigationNode startNode = graph.GetClosestWalkableNode(startPosition);
         NavigationNode targetNode = graph.GetClosestWalkableNode(targetPosition);
 
-        return FindPath(startNode, targetNode);
+        return FindPath(startNode, targetNode, smoothPath, avoidSafeZones);
     }
-    
-    public List<NavigationNode> FindPath(NavigationNode startNode, NavigationNode targetNode)
+
+    public List<NavigationNode> FindPathToClosestZone(Vector3 startPosition, ZoneType targetZone, bool avoidSafeZones)
+    {
+        NavigationNode startNode = graph.GetClosestWalkableNode(startPosition);
+
+        if (startNode == null)
+            return new List<NavigationNode>();
+
+        List<NavigationNode> bestPath = null;
+        float bestCost = float.PositiveInfinity;
+
+        foreach (NavigationNode candidate in graph.WalkableNodes)
+        {
+            if (candidate.Zone != targetZone)
+                continue;
+
+            if (!IsZoneEntry(candidate, targetZone))
+                continue;
+
+            List<NavigationNode> candidatePath = FindPath(startNode, candidate, smooth: false, avoidSafeZones: avoidSafeZones); //turn off smooth only in this case to make a real comparison
+
+            if (candidatePath == null || candidatePath.Count == 0)
+                continue;
+
+            float candidateCost = CalculatePathCost(candidatePath);
+
+            if (candidateCost >= bestCost)
+                continue;
+
+            bestCost = candidateCost;
+            bestPath = candidatePath;
+        }
+
+        return SmoothPath(bestPath) ?? new List<NavigationNode>();
+    }
+
+    private List<NavigationNode> FindPath(NavigationNode startNode, NavigationNode targetNode, bool smooth, bool avoidSafeZones)
     {
         if (startNode == null || targetNode == null)
         {
@@ -52,7 +87,7 @@ public class AStarPathfinder : MonoBehaviour
             {
                 List<NavigationNode> path = ReconstructPath(cameFrom, targetNode);
 
-                if (smoothPath)
+                if (smooth)
                     path = SmoothPath(path);
 
                 return path;
@@ -60,6 +95,9 @@ public class AStarPathfinder : MonoBehaviour
 
             foreach (NavigationNode neighbor in current.Neighbors)
             {
+                if (avoidSafeZones && neighbor.Zone == ZoneType.Safe)
+                    continue;
+
                 float newCost = costSoFar[current] + GetMovementCost(current, neighbor);
                 bool wasVisited = costSoFar.TryGetValue(neighbor, out float previousCost);
                 if (wasVisited && newCost >= previousCost)
@@ -151,5 +189,27 @@ public class AStarPathfinder : MonoBehaviour
 
         path.Reverse();
         return path;
+    }
+
+    private bool IsZoneEntry(NavigationNode node, ZoneType zone)
+    {
+        foreach (NavigationNode neighbor in node.Neighbors)
+        {
+            if (neighbor.Zone != zone)
+                return true;
+        }
+
+        return false;
+    }
+
+    private float CalculatePathCost(IReadOnlyList<NavigationNode> path)
+    {
+        float cost = 0f;
+        for (int i = 1; i < path.Count; i++)
+        {
+            cost += GetMovementCost(path[i - 1], path[i]);
+        }
+
+        return cost;
     }
 }

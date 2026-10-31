@@ -26,6 +26,12 @@ public class PatrolState : State
             return;
         }
 
+        if (_agent.HasLastKnownHunterPosition)
+        {
+            _stateMachine.ChangeState(WolfState.Investigate);
+            return;
+        }
+
         if (!HasValidPatrol())
             return;
 

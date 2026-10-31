@@ -19,11 +19,6 @@ public class HunterAgent : SteeringAgent
     [SerializeField] private Projectile projectilePrefab;
     [SerializeField] private Transform spawnPoint;
 
-    [Header("Navigation")]
-    [SerializeField] private AStarPathfinder pathfinder;
-    [SerializeField] private NavigationGraph graph;
-    [SerializeField, Min(0.1f)] private float nodeReachDistance = 0.3f;
-
     [Header("Bait Stats")]
     [SerializeField, Min(0)] private float baitCooldown = 5f;
     [SerializeField, Min(0)] private float placingBaitDelay = 2f;
@@ -33,6 +28,11 @@ public class HunterAgent : SteeringAgent
     [SerializeField] private float gatherDuration = 3f;
     [SerializeField, Range(0, 2)] private float gatheringDistance = 0.9f;
     [SerializeField] private int RequiredGathers = 3;
+
+    [Header("Navigation")]
+    [SerializeField] private AStarPathfinder pathfinder;
+    [SerializeField] private NavigationGraph graph;
+    [SerializeField, Min(0.1f)] private float nodeReachDistance = 0.3f;
 
     [Header("Check Intervals")]
     [SerializeField] private float detectionInterval = 0.10f;
@@ -47,6 +47,7 @@ public class HunterAgent : SteeringAgent
     [SerializeField, Range(0f, 360f)] protected float viewAngle = 360f;
     [SerializeField] protected LayerMask targetMask = ~0;
     [SerializeField] protected LayerMask obstacleMask = ~0;
+    [SerializeField] private GameObject visualRoot;
 
     [Header("Gizmos")]
     [SerializeField] private bool drawGizmos = true;
@@ -60,6 +61,7 @@ public class HunterAgent : SteeringAgent
     private StateMachine _stateMachine;
     private HunterStateUI _stateUI;
     private PreyAgent _preyAgentAlive;
+    private PreyAgent _attackTarget;
     private PreyAgent _preyAgentDead;
     private float _timeSinceLastAttack;
     private float _currentBaitCooldown;
@@ -73,19 +75,20 @@ public class HunterAgent : SteeringAgent
     private readonly Collider[] _wolfBuffer = new Collider[16];
     private SearchPhase _phase;
     private WolfAgent _wolfAgent;
+    private bool _isdead;
 
     public bool CanAttack => HasTargetAlive && IsReadyToAttack;
     public bool HasTargetAlive => _preyAgentAlive != null;
     public bool HasTargetDead => _preyAgentDead != null;
+    public bool HasAttackTarget => _attackTarget != null && !_attackTarget.IsDead;
+    public float DistanceToAttackTarget => HasAttackTarget ? Vector3.Distance(transform.position, _attackTarget.transform.position) : float.PositiveInfinity;
     public bool IsReadyToAttack => _timeSinceLastAttack >= timeBetweenAttacks;
     public float MeleeAttackRadius => meleeAttackRadius;
     public float RangeAttackRadius => rangeAttackRadius;
-    public float DistanceToTargetAlive => HasTargetAlive ? Vector3.Distance(this.transform.position, _preyAgentAlive.transform.position) : float.PositiveInfinity;
     public float GatherDuration => gatherDuration;
     public bool IsCloseToGather => _preyAgentDead != null ? Vector3.Distance(transform.position, _preyAgentDead.transform.position) <= gatheringDistance : false;
     public float PlacingBaitDelay => placingBaitDelay;
-    public bool CanPlaceBait => _currentBaitCooldown >= baitCooldown;
-    public SearchPhase Phase => _phase;
+    public bool CanPlaceBait => IsOnHunterGround && _currentBaitCooldown >= baitCooldown;
     public bool IsOnHunterGround => _phase == SearchPhase.ExploringHuntingGround;
     public bool RequiredGatheredCompleted => _currentPreyGathered >= RequiredGathers;
     public float RespawnTime => respawnTime;
@@ -108,7 +111,7 @@ public class HunterAgent : SteeringAgent
         AttackState attackState = new(this, _stateMachine);
         GoingToGatherState goingToGatherState = new(this, _stateMachine);
         _gatheringState = new(this, _stateMachine);
-        FleeState fleeState = new(this, graph, _stateMachine);
+        FleeState fleeState = new(this, _stateMachine);
         HunterDeadState deadState = new(this, graph, _stateMachine);
         ExitState exitState = new(this, graph, _stateMachine);
 
@@ -133,23 +136,25 @@ public class HunterAgent : SteeringAgent
         SetSearchPhase(SearchPhase.GoingToHuntingGround);
         _stateMachine.ChangeState(HunterState.Search);
 
-        WolfManager.Instance.HunterCaptured += HandleCaptured;
+        WolfManager.Instance.HunterKilled += HandleKilled;
     }
         
 
     void Update()
     {
-        double now = Time.timeAsDouble;
-
-        if (now >= _nextDetection)
+        if (!_isdead)
         {
-            _nextDetection = now + detectionInterval;
-            PerformDetection();
+            double now = Time.timeAsDouble;
+
+            if (now >= _nextDetection)
+            {
+                _nextDetection = now + detectionInterval;
+                PerformDetection();
+            }
+
+            UpdateAttackTime();
+            UpdateBaitCooldown();
         }
-
-        UpdateAttackTime();
-        UpdateBaitCooldown();
-
         _stateMachine.Update();
     }
 
@@ -166,7 +171,7 @@ public class HunterAgent : SteeringAgent
     private void OnDisable()
     {
         if (WolfManager.Instance != null)
-            WolfManager.Instance.HunterCaptured -= HandleCaptured;
+            WolfManager.Instance.HunterKilled -= HandleKilled;
     }
 
     #endregion
@@ -175,7 +180,7 @@ public class HunterAgent : SteeringAgent
 
     public bool SetDestination(Vector3 destination)
     {
-        _currentPath = pathfinder.FindPath(transform.position, destination);
+        _currentPath = pathfinder.FindPath(transform.position, destination, false);
         _currentPathIndex = 0;
 
         return _currentPath != null && _currentPath.Count > 0;
@@ -205,12 +210,23 @@ public class HunterAgent : SteeringAgent
 
     public void MeleeAttack()
     {
-        _preyAgentAlive.TakeDamage(_preyAgentAlive.CurrentHealth);
+        if (!HasAttackTarget)
+            return;
+
+        _attackTarget.TakeDamage(_attackTarget.CurrentHealth);
+    }
+
+    public Vector3 GetAttackPursuitSteering()
+    {
+        return HasAttackTarget ? Pursuit(_attackTarget) : Vector3.zero;
     }
 
     public void RangeAttack()
     {
-        Vector3 targetPosition = CalculateProjectileTargetPosition(_preyAgentAlive, projectilePrefab.Speed);
+        if (!HasAttackTarget)
+            return;
+
+        Vector3 targetPosition = CalculateProjectileTargetPosition(_attackTarget, projectilePrefab.Speed);
         Projectile projectile = Instantiate(projectilePrefab, spawnPoint.position, Quaternion.identity);
 
         projectile.Initialize(targetPosition);
@@ -261,7 +277,9 @@ public class HunterAgent : SteeringAgent
 
     public void ResetSimulationCycle(Vector3 spawnPosition)
     {
+        _isdead = false;
         ClearPath();
+        ClearAttackTarget();
 
         transform.position = spawnPosition;
         transform.rotation = Quaternion.identity;
@@ -274,9 +292,65 @@ public class HunterAgent : SteeringAgent
         _currentBaitCooldown = 0f;
 
         _nextDetection = Time.timeAsDouble + detectionInterval;
+        _wolfAgent = null;
 
         SetSearchPhase(SearchPhase.GoingToHuntingGround);
         _stateUI.SetGatherCount(_currentPreyGathered);
+    }
+
+    public void SetDeadPresentation(bool dead)
+    {
+        visualRoot.SetActive(!dead);
+
+        foreach (Collider currentCollider in GetComponentsInChildren<Collider>())
+            currentCollider.enabled = !dead;
+    }
+
+    public void ArrivedToSafe()
+    {
+        if (WolfManager.Instance != null)
+            WolfManager.Instance.RaiseHunterEnteredSafeZone();
+    }
+
+    private bool SetPath(List<NavigationNode> path)
+    {
+        ClearPath();
+        if (path == null || path.Count == 0)
+            return false;
+
+        _currentPath = path;
+        _currentPathIndex = 0;
+
+        return true;
+    }
+
+    public bool SetDestinationToClosestZone(ZoneType zone)
+    {
+        List<NavigationNode> path = pathfinder.FindPathToClosestZone(transform.position, zone, false);
+
+        return SetPath(path);
+    }
+
+    public bool TryLockAttackTarget()
+    {
+        if (_preyAgentAlive == null || _preyAgentAlive.IsDead)
+            return false;
+
+        _attackTarget = _preyAgentAlive;
+        return true;
+    }
+
+    public void ClearAttackTarget()
+    {
+        _attackTarget = null;
+    }
+
+    public bool CanSeeAttackTarget()
+    {
+        if (!HasAttackTarget)
+            return false;
+
+        return FieldOfViewUtility.CanSee(transform, _attackTarget.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
     }
 
     #endregion
@@ -301,7 +375,8 @@ public class HunterAgent : SteeringAgent
 
         for (int i = 0; i < count; i++)
         {
-            if (!_wolfBuffer[i].TryGetComponent(out WolfAgent wolf))
+            var wolf = _wolfBuffer[i].GetComponentInParent<WolfAgent>();
+            if (wolf == null)
                 continue;
 
             bool canSee = FieldOfViewUtility.CanSee(transform, wolf.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
@@ -364,9 +439,7 @@ public class HunterAgent : SteeringAgent
         }
 
         _preyAgentAlive = closestAlive;
-
-        if (_preyAgentDead == null)
-            _preyAgentDead = closestDead;
+        _preyAgentDead = closestDead;
     }
 
     private void UpdateAttackTime()
@@ -412,11 +485,12 @@ public class HunterAgent : SteeringAgent
         }
     }
 
-    private void HandleCaptured()
+    private void HandleKilled()
     {
         ClearPath();
         StopMoving();
         _stateMachine.ChangeState(HunterState.Dead);
+        _isdead = true;
     }
 
     #endregion

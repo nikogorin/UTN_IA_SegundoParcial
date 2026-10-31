@@ -3,31 +3,44 @@
 public class FleeState : State
 {
     private readonly HunterAgent _agent;
-    private readonly NavigationGraph _graph;
     private float _currentTime = 0;
+    private bool _hasPath;
+    private bool _safeArrivalNotified;
 
-    public FleeState(HunterAgent agent, NavigationGraph graph, StateMachine stateMachine) : base(stateMachine)
+    public FleeState(HunterAgent agent, StateMachine stateMachine) : base(stateMachine)
     {
         _agent = agent;
-        _graph = graph;
     }
 
     public override void Enter()
     {
         _currentTime = 0;
-        NavigationNode destination;
-        destination = _graph.GetClosestNodeInZone(_agent.transform.position, ZoneType.Safe);
-        if (!_agent.SetDestination(destination.Position))
-        {
-            Debug.LogWarning($"No path found to {destination.Name}.");
-        }
+        _safeArrivalNotified = false;
+
+        _agent.SetSearchPhase(SearchPhase.GoingToHuntingGround);
+
+        _hasPath = _agent.SetDestinationToClosestZone(ZoneType.Safe);
+        if (!_hasPath)
+            Debug.LogWarning("No path found to a Safe zone.");
     }
 
     public override void Update()
     {
-        bool arrived = _agent.FollowPath();
+        if (!_hasPath)
+        {
+            _hasPath = _agent.SetDestinationToClosestZone(ZoneType.Safe);
+            return;
+        }
+
+        bool arrived = _hasPath && _agent.FollowPath();
         if (!arrived)
             return;
+
+        if (!_safeArrivalNotified)
+        {
+            _safeArrivalNotified = true;
+            _agent.ArrivedToSafe();
+        }
 
         _currentTime += Time.deltaTime;
         if (_currentTime >= _agent.SafeZoneWaitTime)

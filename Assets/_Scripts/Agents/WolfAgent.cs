@@ -32,8 +32,8 @@ public class WolfAgent : SteeringAgent
     [SerializeField, Min(0.01f)] private float pathNodeSize = 0.35f;
     [SerializeField, Min(0f)] private float pathHeightOffset = 0.3f;
 
-    public Vector3 LastKnownHunterPosition { get; private set; }
-    public bool HasLastKnownHunterPosition { get; private set; } // can be autocalculated
+    public Vector3 LastKnownHunterPosition => _lastKnownHunterPosition;
+    public bool HasLastKnownHunterPosition => _hasLastKnownHunterPosition;
     public bool CanSeeHunter => _visibleHunter != null;
 
     private StateMachine _stateMachine;
@@ -43,6 +43,8 @@ public class WolfAgent : SteeringAgent
     private HunterAgent _visibleHunter;
     private SphereCollider _trigger;
     private double _nextDetection;
+    private Vector3 _lastKnownHunterPosition = default;
+    private bool _hasLastKnownHunterPosition;
 
     protected override void Awake()
     {
@@ -66,11 +68,19 @@ public class WolfAgent : SteeringAgent
         _stateMachine.RegisterState(WolfState.Patrol, patrolState);
         _stateMachine.RegisterState(WolfState.Chase, chaseState);
         _stateMachine.RegisterState(WolfState.Investigate, investigateState);
+
     }
 
     private void Start()
     {
         _stateMachine.ChangeState(WolfState.Patrol);
+
+        if(WolfManager.Instance != null)
+        {
+            WolfManager.Instance.HunterDetected += HunterDetected;
+            WolfManager.Instance.HunterKilled += HunterKilled;
+            WolfManager.Instance.HunterEnteredSafeZone += HunterEnteredSafeZone;
+        }
     }
 
     void Update()
@@ -86,6 +96,16 @@ public class WolfAgent : SteeringAgent
         _stateMachine.Update();
     }
 
+    private void OnDestroy()
+    {
+        if (WolfManager.Instance != null)
+        {
+            WolfManager.Instance.HunterDetected -= HunterDetected;
+            WolfManager.Instance.HunterKilled -= HunterKilled;
+            WolfManager.Instance.HunterEnteredSafeZone -= HunterEnteredSafeZone;
+        }
+    }
+
     private void OnValidate()
     {
         if (_trigger == null)
@@ -94,10 +114,29 @@ public class WolfAgent : SteeringAgent
         ConfigureTrigger();
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!TryGetHunter(other, out HunterAgent hunter))
+            return;
+
+        _hunterInRange = hunter;
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!TryGetHunter(other, out HunterAgent hunter))
+            return;
+
+        if (_hunterInRange != hunter)
+            return;
+
+        ForgetHunter();
+    }
+
     public void ForgetLastKnownHunterPosition()
     {
-        HasLastKnownHunterPosition = false;
-        LastKnownHunterPosition = default;
+        _lastKnownHunterPosition = default;
+        _hasLastKnownHunterPosition = false;
     }
 
     public void ForgetHunter()
@@ -108,12 +147,10 @@ public class WolfAgent : SteeringAgent
 
     public void KillHunter()
     {
-        StopMoving();
+        if (WolfManager.Instance == null)
+            return;
 
-        WolfManager.Instance.RaiseHunterCaptured();
-
-        ForgetHunter();
-        ForgetLastKnownHunterPosition();
+        WolfManager.Instance.RaiseHunterKilled();
     }
 
     public bool FollowPath()
@@ -172,7 +209,7 @@ public class WolfAgent : SteeringAgent
 
     public bool SetDestination(Vector3 destination)
     {
-        _currentPath = pathfinder.FindPath(transform.position, destination);
+        _currentPath = pathfinder.FindPath(transform.position, destination, true);
         _currentPathIndex = 0;
 
         return _currentPath != null && _currentPath.Count > 0;
@@ -196,8 +233,7 @@ public class WolfAgent : SteeringAgent
     {
         while (_currentPathIndex < _currentPath.Count)
         {
-            Vector3 difference =
-                _currentPath[_currentPathIndex].Position - transform.position;
+            Vector3 difference = _currentPath[_currentPathIndex].Position - transform.position;
 
             difference.y = 0f;
 
@@ -211,28 +247,11 @@ public class WolfAgent : SteeringAgent
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (!TryGetHunter(other, out HunterAgent hunter))
-            return;
-
-        _hunterInRange = hunter;
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!TryGetHunter(other, out HunterAgent hunter))
-            return;
-
-        if (_hunterInRange != hunter)
-            return;
-
-        ForgetHunter();
-    }
-
     private void PerformHunterDetection()
     {
+        bool wasVisible = _visibleHunter != null;
         _visibleHunter = null;
+
         if (_hunterInRange == null)
             return;
 
@@ -244,11 +263,21 @@ public class WolfAgent : SteeringAgent
 
         bool canSee = FieldOfViewUtility.CanSee(transform, _hunterInRange.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
         if (!canSee)
+        {
+            if (wasVisible && HasLastKnownHunterPosition && WolfManager.Instance != null)
+            {
+                WolfManager.Instance.RaiseHunterAlertDetection(LastKnownHunterPosition, GetInstanceID());
+            }
             return;
+        }
+            
 
         _visibleHunter = _hunterInRange;
-        LastKnownHunterPosition = _hunterInRange.transform.position;
-        HasLastKnownHunterPosition = true;
+        _lastKnownHunterPosition = _hunterInRange.transform.position;
+        _hasLastKnownHunterPosition = true;
+
+        if (!wasVisible && WolfManager.Instance != null)
+            WolfManager.Instance.RaiseHunterAlertDetection(_hunterInRange.transform.position, GetInstanceID());
     }
 
     private bool TryGetHunter(Collider other, out HunterAgent hunter)
@@ -266,13 +295,48 @@ public class WolfAgent : SteeringAgent
         return (targetMask.value & (1 << layer)) != 0;
     }
 
+    private void HunterDetected(Vector3 hunterPosition, int detectingWolfId)
+    {
+        if (detectingWolfId == GetInstanceID())
+            return;
+
+        _lastKnownHunterPosition = hunterPosition;
+        _hasLastKnownHunterPosition = true;
+    }
+
+    private void HunterKilled()
+    {
+        StopMoving();
+        ForgetHunter();
+        ForgetLastKnownHunterPosition();
+
+        _stateMachine.ChangeState(WolfState.Patrol);
+    }
+
+    private void HunterEnteredSafeZone()
+    {
+        StopMoving();
+        ForgetHunter();
+        ForgetLastKnownHunterPosition();
+        _stateMachine.ChangeState(WolfState.Patrol);
+    }
+
     #region [Gizmos]
     private void OnDrawGizmos()
     {
-        if (!drawGizmos) return;
+        if (!drawGizmos) 
+            return;
 
         Gizmos.color = Color.brown;
         Gizmos.DrawWireSphere(transform.position, targetDetectionRadius);
+
+        if (HasLastKnownHunterPosition)
+        {
+            Gizmos.color = Color.cornsilk;
+            Gizmos.DrawWireSphere(LastKnownHunterPosition, 0.6f);
+
+            Gizmos.DrawLine(transform.position, LastKnownHunterPosition);
+        }
 
         if (drawCurrentPath)
             DrawCurrentPath();

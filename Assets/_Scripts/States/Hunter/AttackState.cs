@@ -9,6 +9,11 @@ public class AttackState : State
         _agent = hunterAgent;
     }
 
+    public override void Enter()
+    {
+        _agent.TryLockAttackTarget();
+    }
+
     public override void Update()
     {
         if (_agent.ThreatDetected)
@@ -23,13 +28,13 @@ public class AttackState : State
             return;
         }
 
-        if(!_agent.HasTargetAlive)
+        if(!_agent.HasAttackTarget || !_agent.CanSeeAttackTarget())
         {
             _stateMachine.ChangeState(HunterState.Search);
             return;
         }
 
-        float distance = _agent.DistanceToTargetAlive;
+        float distance = _agent.DistanceToAttackTarget;
 
         if(distance <= _agent.MeleeAttackRadius)
         {
@@ -50,8 +55,14 @@ public class AttackState : State
             return;
         }
 
-        Vector3 steering = _agent.GetPursuitSteering();
+        Vector3 steering = _agent.GetAttackPursuitSteering();
+
         _agent.ApplySteering(steering);
         _agent.Move();
+    }
+
+    public override void Exit()
+    {
+        _agent.ClearAttackTarget();
     }
 }
