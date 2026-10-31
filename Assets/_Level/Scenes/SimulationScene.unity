@@ -2189,6 +2189,10 @@ PrefabInstance:
       value: 0.65
       objectReference: {fileID: 0}
     - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
+      propertyPath: gatherDuration
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
       propertyPath: maxAcceleration
       value: 10
       objectReference: {fileID: 0}
@@ -2205,8 +2209,16 @@ PrefabInstance:
       value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
+      propertyPath: placingBaitDelay
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
       propertyPath: preyLayer.m_Bits
       value: 2048
+      objectReference: {fileID: 0}
+    - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
+      propertyPath: wolfLayer.m_Bits
+      value: 512
       objectReference: {fileID: 0}
     - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
       propertyPath: nodeReachDistance
@@ -2219,6 +2231,10 @@ PrefabInstance:
     - target: {fileID: 3238472036262370434, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
       propertyPath: obstacleMask.m_Bits
       value: 256
+      objectReference: {fileID: 0}
+    - target: {fileID: 8351061648956666568, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
+      propertyPath: m_Radius
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8351061648956666568, guid: f2b86f441429cfd4b9e3508f7dc97ed7, type: 3}
       propertyPath: m_Enabled
@@ -3883,7 +3899,6 @@ GameObject:
   - component: {fileID: 1345027559}
   - component: {fileID: 1345027562}
   - component: {fileID: 1345027561}
-  - component: {fileID: 1345027560}
   m_Layer: 9
   m_Name: Visual
   m_TagString: Untagged
@@ -3906,29 +3921,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2061183676}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!136 &1345027560
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345027558}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1345027561
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -4972,7 +4964,7 @@ MonoBehaviour:
     m_Bits: 256
   groundProbeHeight: 3
   groundProbeDistance: 6
-  drawGraphGizmos: 1
+  drawGraphGizmos: 0
   drawGridArea: 1
   drawNodes: 1
   drawConnections: 1
@@ -5358,6 +5350,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2061183676}
   - component: {fileID: 2061183680}
+  - component: {fileID: 2061183681}
   - component: {fileID: 2061183679}
   - component: {fileID: 2061183677}
   - component: {fileID: 2061183678}
@@ -5477,7 +5470,7 @@ SphereCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Radius: 20
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!54 &2061183680
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5505,6 +5498,29 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
+--- !u!136 &2061183681
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2061183675}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 2, z: 0}
 --- !u!1001 &2089312788
 PrefabInstance:
   m_ObjectHideFlags: 0

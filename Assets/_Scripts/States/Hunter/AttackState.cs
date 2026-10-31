@@ -11,7 +11,13 @@ public class AttackState : State
 
     public override void Update()
     {
-        if(_agent.HasTargetDead)
+        if (_agent.ThreatDetected)
+        {
+            _stateMachine.ChangeState(HunterState.Flee);
+            return;
+        }
+
+        if (_agent.HasTargetDead)
         {
             _stateMachine.ChangeState(HunterState.GoingToGather);
             return;

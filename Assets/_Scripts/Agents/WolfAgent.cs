@@ -151,6 +151,16 @@ public class WolfAgent : SteeringAgent
         return Vector3.SqrMagnitude(_visibleHunter.transform.position - transform.position) <= (attackRange * attackRange);
     }
 
+    public bool IsHunterInSafeZone()
+    {
+        if (_hunterInRange == null)
+            return false;
+
+        NavigationNode hunterNode = graph.GetClosestWalkableNode(_hunterInRange.transform.position);
+
+        return hunterNode != null && hunterNode.Zone == ZoneType.Safe;
+    }
+
     private void ConfigureTrigger()
     {
         if (_trigger == null)
@@ -173,6 +183,13 @@ public class WolfAgent : SteeringAgent
         _currentPath.Clear();
         _currentPathIndex = 0;
         StopMoving();
+    }
+
+    public void AbandonHunterTrail()
+    {
+        _visibleHunter = null;
+        ForgetLastKnownHunterPosition();
+        ClearPath();
     }
 
     private void SkipReachedNodes()
@@ -219,8 +236,13 @@ public class WolfAgent : SteeringAgent
         if (_hunterInRange == null)
             return;
 
-        bool canSee = FieldOfViewUtility.CanSee(transform, _hunterInRange.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
+        if (IsHunterInSafeZone())
+        {
+            ForgetLastKnownHunterPosition();
+            return;
+        }
 
+        bool canSee = FieldOfViewUtility.CanSee(transform, _hunterInRange.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
         if (!canSee)
             return;
 

@@ -555,6 +555,7 @@ GameObject:
   - component: {fileID: 8351061648956666568}
   - component: {fileID: 3238472036262370434}
   - component: {fileID: 6589151460542105398}
+  - component: {fileID: 8635379254678826952}
   m_Layer: 10
   m_Name: GO_Hunter_Prefab
   m_TagString: Untagged
@@ -599,7 +600,7 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.5
+  m_Radius: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &3238472036262370434
 MonoBehaviour:
@@ -613,9 +614,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac0bacb5031a8fc4595ae03b225659b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FSM
-  speed: 5
-  maxAcceleration: 2
-  arrivalThreshold: 0.2
+  speed: 6
+  maxAcceleration: 10
+  arrivalThreshold: 0.4
   slowingDistance: 2
   separationDistance: 2
   alignmentDistance: 3
@@ -634,24 +635,24 @@ MonoBehaviour:
   spawnPoint: {fileID: 7764649897672465081}
   pathfinder: {fileID: 0}
   graph: {fileID: 0}
-  nodeReachDistance: 0.3
+  nodeReachDistance: 0.8
   baitCooldown: 5
-  placingBaitDelay: 2
+  placingBaitDelay: 3
   gatherDetectionRadius: 10
-  gatherDuration: 3
+  gatherDuration: 2
   gatheringDistance: 1.5
   RequiredGathers: 3
   detectionInterval: 0.1
   wolfLayer:
     serializedVersion: 2
     m_Bits: 512
-  RespawnTime: 5
-  SafeZoneWaitTime: 2
+  respawnTime: 5
+  safeZoneWaitTime: 10
   eyeHeight: 1
   viewAngle: 360
   targetMask:
     serializedVersion: 2
-    m_Bits: 1536
+    m_Bits: 2560
   obstacleMask:
     serializedVersion: 2
     m_Bits: 256
@@ -660,8 +661,8 @@ MonoBehaviour:
   pathColor: {r: 0, g: 0.19680595, b: 1, a: 1}
   currentNodeColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   destinationNodeColor: {r: 0, g: 1, b: 0, a: 1}
-  pathNodeSize: 0.35
-  pathHeightOffset: 0.3
+  pathNodeSize: 0.65
+  pathHeightOffset: 0.6
 --- !u!114 &6589151460542105398
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -681,6 +682,36 @@ MonoBehaviour:
   baitCooldownImage: {fileID: 8420818127746004442}
   baitCooldownImageBackground: {fileID: 364817527901441856}
   channelingSlideImage: {fileID: 5791553344584188070}
+--- !u!114 &8635379254678826952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8556675450026751209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac5b3e1c93c749b4f9ef66d49bb11075, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FieldOfViewGizmos
+  observer: {fileID: 2455700254074999848}
+  targets:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  radius: 10
+  angle: 360
+  eyeHeight: 1
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 256
+  arcSegments: 32
+  fieldColor: {r: 1, g: 0, b: 0.636364, a: 1}
+  visibleColor: {r: 0.3820755, g: 1, b: 0.7723436, a: 1}
+  blockedColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!1001 &1701739077740141412
 PrefabInstance:
   m_ObjectHideFlags: 0

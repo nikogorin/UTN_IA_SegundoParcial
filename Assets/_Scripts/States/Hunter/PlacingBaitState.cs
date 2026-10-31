@@ -22,6 +22,12 @@ public class PlacingBaitState : State
 
     public override void Update()
     {
+        if (_agent.ThreatDetected)
+        {
+            _stateMachine.ChangeState(HunterState.Flee);
+            return;
+        }
+
         _currentTime += Time.deltaTime;
 
         float progress = Mathf.Clamp01(_currentTime / _agent.PlacingBaitDelay);

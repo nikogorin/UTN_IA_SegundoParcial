@@ -16,6 +16,13 @@ public class ChaseState : State
 
     public override void Update()
     {
+        if (_agent.IsHunterInSafeZone())
+        {
+            _agent.AbandonHunterTrail();
+            _stateMachine.ChangeState(WolfState.Patrol);
+            return;
+        }
+
         if (!_agent.CanSeeHunter)
         {
             _stateMachine.ChangeState(WolfState.Investigate);

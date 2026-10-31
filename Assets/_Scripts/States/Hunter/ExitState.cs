@@ -22,6 +22,12 @@ public class ExitState : State
 
     public override void Update()
     {
+        if (_agent.ThreatDetected)
+        {
+            _stateMachine.ChangeState(HunterState.Flee);
+            return;
+        }
+
         bool arrived = _agent.FollowPath();
 
         if (!arrived)

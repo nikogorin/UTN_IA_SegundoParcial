@@ -11,6 +11,12 @@ public class GoingToGatherState : State
 
     public override void Update()
     {
+        if (_agent.ThreatDetected)
+        {
+            _stateMachine.ChangeState(HunterState.Flee);
+            return;
+        }
+
         if (!_agent.HasTargetDead)
         {
             _stateMachine.ChangeState(HunterState.Search);

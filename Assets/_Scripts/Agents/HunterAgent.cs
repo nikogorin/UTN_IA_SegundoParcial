@@ -40,7 +40,7 @@ public class HunterAgent : SteeringAgent
 
     [Header("Respawn & Safe Zone (sec)")]
     [SerializeField] private float respawnTime = 5f;
-    [SerializeField] private float safeZoneWaitTime = 2f;
+    [SerializeField] private float safeZoneWaitTime = 10f;
 
     [Header("Field of view")]
     [SerializeField] protected float eyeHeight = 1f;
@@ -70,7 +70,9 @@ public class HunterAgent : SteeringAgent
     private int _currentPathIndex;
     private int _currentPreyGathered;
     private readonly Collider[] _preyBuffer = new Collider[16];
+    private readonly Collider[] _wolfBuffer = new Collider[16];
     private SearchPhase _phase;
+    private WolfAgent _wolfAgent;
 
     public bool CanAttack => HasTargetAlive && IsReadyToAttack;
     public bool HasTargetAlive => _preyAgentAlive != null;
@@ -88,6 +90,7 @@ public class HunterAgent : SteeringAgent
     public bool RequiredGatheredCompleted => _currentPreyGathered >= RequiredGathers;
     public float RespawnTime => respawnTime;
     public float SafeZoneWaitTime => safeZoneWaitTime;
+    public bool ThreatDetected => _wolfAgent != null;
 
     #region [Unity Events]
 
@@ -100,26 +103,26 @@ public class HunterAgent : SteeringAgent
         _stateMachine.OnStateChanged += _stateUI.SetState;
         _stateUI.SetChannelingSlide(0f);
 
-        //StartingState startingState = new(this, graph, _stateMachine);
         SearchState searchState = new(this, graph, _stateMachine);
         _placingBaitState = new(this, _stateMachine);
         AttackState attackState = new(this, _stateMachine);
         GoingToGatherState goingToGatherState = new(this, _stateMachine);
         _gatheringState = new(this, _stateMachine);
+        FleeState fleeState = new(this, graph, _stateMachine);
         HunterDeadState deadState = new(this, graph, _stateMachine);
         ExitState exitState = new(this, graph, _stateMachine);
 
-        _placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
-        _gatheringState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
-
-        //_stateMachine.RegisterState(HunterState.Starting, startingState);
         _stateMachine.RegisterState(HunterState.Search, searchState);
         _stateMachine.RegisterState(HunterState.PlacingBait, _placingBaitState);
         _stateMachine.RegisterState(HunterState.Attacking, attackState);
         _stateMachine.RegisterState(HunterState.GoingToGather, goingToGatherState);
         _stateMachine.RegisterState(HunterState.Gathering, _gatheringState);
+        _stateMachine.RegisterState(HunterState.Flee, fleeState);
         _stateMachine.RegisterState(HunterState.Dead, deadState);
         _stateMachine.RegisterState(HunterState.Exit, exitState);
+
+        _placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
+        _gatheringState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 
         _timeSinceLastAttack = 0f;
         _currentBaitCooldown = 0f;
@@ -282,10 +285,42 @@ public class HunterAgent : SteeringAgent
 
     private void PerformDetection()
     {
-        // Cambiar para detectar lobos
-        if (!IsOnHunterGround)
-            return;
+        ThreatDetection();
 
+        if (IsOnHunterGround)
+            HunterGroundDetection();
+    }
+
+    private void ThreatDetection()
+    {
+        int count = Physics.OverlapSphereNonAlloc(transform.position, targetDetectionRadius, _wolfBuffer, wolfLayer, QueryTriggerInteraction.Ignore);
+
+        WolfAgent closestWolf = null;
+        float closestWolfSqr = float.PositiveInfinity;
+        float wolfRadiusSqr = targetDetectionRadius * targetDetectionRadius;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (!_wolfBuffer[i].TryGetComponent(out WolfAgent wolf))
+                continue;
+
+            bool canSee = FieldOfViewUtility.CanSee(transform, wolf.transform, targetDetectionRadius, viewAngle, eyeHeight, obstacleMask);
+            if (!canSee)
+                continue;
+
+            float sqrDistance = (wolf.transform.position - transform.position).sqrMagnitude;
+            if (sqrDistance <= wolfRadiusSqr && sqrDistance < closestWolfSqr)
+            {
+                closestWolf = wolf;
+                closestWolfSqr = sqrDistance;
+            }
+        }
+
+        _wolfAgent = closestWolf;
+    }
+
+    private void HunterGroundDetection()
+    {
         float maxDetectionRadius = Mathf.Max(targetDetectionRadius, gatherDetectionRadius);
         int count = Physics.OverlapSphereNonAlloc(transform.position, maxDetectionRadius, _preyBuffer, preyLayer, QueryTriggerInteraction.Ignore);
 
