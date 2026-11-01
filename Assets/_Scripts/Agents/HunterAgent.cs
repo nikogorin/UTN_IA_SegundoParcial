@@ -8,6 +8,7 @@ public enum SearchPhase
     ExploringHuntingGround
 }
 
+[RequireComponent(typeof(HunterStateUI))]
 public class HunterAgent : SteeringAgent
 {
     [Header("Attack Stats")]

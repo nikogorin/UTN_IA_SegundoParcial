@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(SphereCollider))]
+[RequireComponent(typeof(WolfStateUI))]
 public class WolfAgent : SteeringAgent
 {
     [Header("Attack stats")]
@@ -37,6 +38,8 @@ public class WolfAgent : SteeringAgent
     public bool CanSeeHunter => _visibleHunter != null;
 
     private StateMachine _stateMachine;
+    private InvestigateState _investigateState;
+    private WolfStateUI _stateUI;
     private List<NavigationNode> _currentPath = new();
     private int _currentPathIndex;
     private HunterAgent _hunterInRange;
@@ -46,6 +49,7 @@ public class WolfAgent : SteeringAgent
     private Vector3 _lastKnownHunterPosition = default;
     private bool _hasLastKnownHunterPosition;
 
+    #region [Unity Events]
     protected override void Awake()
     {
         base.Awake();
@@ -54,20 +58,20 @@ public class WolfAgent : SteeringAgent
         ConfigureTrigger();
 
         _stateMachine = new StateMachine();
-        //_stateUI = GetComponent<HunterStateUI>();
-        //_stateMachine.OnStateChanged += _stateUI.SetState;
-        //_stateUI.SetChannelingSlide(0f);
+        
+        _stateUI = GetComponent<WolfStateUI>();
+        _stateMachine.OnStateChanged += _stateUI.SetState;
+        _stateUI.SetChannelingSlide(0f);
 
         PatrolState patrolState = new(this, patrolData, _stateMachine);
         ChaseState chaseState = new(this, _stateMachine);
-        InvestigateState investigateState = new(this, _stateMachine);
+        _investigateState = new(this, _stateMachine);
 
-        //_placingBaitState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
-        //_gatheringState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
+        _investigateState.ChannelProgressChanged += _stateUI.SetChannelingSlide;
 
         _stateMachine.RegisterState(WolfState.Patrol, patrolState);
         _stateMachine.RegisterState(WolfState.Chase, chaseState);
-        _stateMachine.RegisterState(WolfState.Investigate, investigateState);
+        _stateMachine.RegisterState(WolfState.Investigate, _investigateState);
 
     }
 
@@ -104,6 +108,8 @@ public class WolfAgent : SteeringAgent
             WolfManager.Instance.HunterKilled -= HunterKilled;
             WolfManager.Instance.HunterEnteredSafeZone -= HunterEnteredSafeZone;
         }
+
+        _investigateState.ChannelProgressChanged -= _stateUI.SetChannelingSlide;
     }
 
     private void OnValidate()
@@ -133,6 +139,9 @@ public class WolfAgent : SteeringAgent
         ForgetHunter();
     }
 
+    #endregion
+
+    #region [Public Methods]
     public void ForgetLastKnownHunterPosition()
     {
         _lastKnownHunterPosition = default;
@@ -198,15 +207,6 @@ public class WolfAgent : SteeringAgent
         return hunterNode != null && hunterNode.Zone == ZoneType.Safe;
     }
 
-    private void ConfigureTrigger()
-    {
-        if (_trigger == null)
-            return;
-
-        _trigger.isTrigger = true;
-        _trigger.radius = targetDetectionRadius;
-    }
-
     public bool SetDestination(Vector3 destination)
     {
         _currentPath = pathfinder.FindPath(transform.position, destination, true);
@@ -227,6 +227,18 @@ public class WolfAgent : SteeringAgent
         _visibleHunter = null;
         ForgetLastKnownHunterPosition();
         ClearPath();
+    }
+
+    #endregion
+
+    #region [Private Methods]
+    private void ConfigureTrigger()
+    {
+        if (_trigger == null)
+            return;
+
+        _trigger.isTrigger = true;
+        _trigger.radius = targetDetectionRadius;
     }
 
     private void SkipReachedNodes()
@@ -320,6 +332,7 @@ public class WolfAgent : SteeringAgent
         ForgetLastKnownHunterPosition();
         _stateMachine.ChangeState(WolfState.Patrol);
     }
+    #endregion
 
     #region [Gizmos]
     private void OnDrawGizmos()

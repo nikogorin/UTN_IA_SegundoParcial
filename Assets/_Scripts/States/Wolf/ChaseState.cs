@@ -9,11 +9,6 @@ public class ChaseState : State
         _agent = agent;
     }
 
-    public override void Enter()
-    {
-        // Alertar otros lobos
-    }
-
     public override void Update()
     {
         if (_agent.IsHunterInSafeZone())

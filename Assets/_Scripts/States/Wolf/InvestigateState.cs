@@ -1,12 +1,15 @@
+using System;
 using UnityEngine;
 
 public class InvestigateState : State
 {
     private readonly WolfAgent _agent;
     private float _searchTimer;
-    private const float SearchDuration = 2f;
+    private const float searchDuration = 2f;
     private bool _hasPath;
     private Vector3 _investigationTarget;
+
+    public event Action<float> ChannelProgressChanged;
 
     public InvestigateState(WolfAgent agent, StateMachine stateMachine) : base(stateMachine)
     {
@@ -52,13 +55,17 @@ public class InvestigateState : State
             return;
 
         _searchTimer += Time.deltaTime;
-        if (_searchTimer >= SearchDuration)
+        float progress = Mathf.Clamp01(_searchTimer / searchDuration);
+        ChannelProgressChanged?.Invoke(progress);
+
+        if (_searchTimer >= searchDuration)
             FinishInvestigation();
     }
 
     public override void Exit()
     {
         _agent.ClearPath();
+        ChannelProgressChanged?.Invoke(0f);
     }
 
     private void FinishInvestigation()
