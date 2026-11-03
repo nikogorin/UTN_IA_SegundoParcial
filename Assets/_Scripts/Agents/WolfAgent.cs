@@ -146,6 +146,7 @@ public class WolfAgent : SteeringAgent
     {
         _lastKnownHunterPosition = default;
         _hasLastKnownHunterPosition = false;
+        _stateUI.SetNotificationImage(false, isAlert: false);
     }
 
     public void ForgetHunter()
@@ -310,10 +311,14 @@ public class WolfAgent : SteeringAgent
     private void HunterDetected(Vector3 hunterPosition, int detectingWolfId)
     {
         if (detectingWolfId == GetInstanceID())
+        {
+            _stateUI.SetNotificationImage(true, isAlert: false);
             return;
+        }
 
         _lastKnownHunterPosition = hunterPosition;
         _hasLastKnownHunterPosition = true;
+        _stateUI.SetNotificationImage(true, isAlert: true);
     }
 
     private void HunterKilled()
@@ -330,6 +335,7 @@ public class WolfAgent : SteeringAgent
         StopMoving();
         ForgetHunter();
         ForgetLastKnownHunterPosition();
+        
         _stateMachine.ChangeState(WolfState.Patrol);
     }
     #endregion

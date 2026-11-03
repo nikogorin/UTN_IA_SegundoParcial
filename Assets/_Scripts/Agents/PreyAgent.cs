@@ -258,16 +258,22 @@ public class PreyAgent : SteeringAgent
 
     private void OnDrawGizmos()
     {
-        if (!drawGizmos) return;
+        if (!drawGizmos) 
+            return;
 
-        Gizmos.color = Color.lightGreen;
-        Gizmos.DrawWireSphere(transform.position, flockDetectionRadius);
+        Vector3 center = transform.position + Vector3.up * 0.1f;
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(center, SeparationDistance);
 
-        Gizmos.color = Color.lightPink;
-        Gizmos.DrawWireSphere(transform.position, hunterDetectionRadius);
+        Gizmos.color = Color.yellow;
+        float flockingRadius = Mathf.Max(AlignmentDistance, CohesionDistance);
+        Gizmos.DrawWireSphere(center, flockingRadius);
 
-        Gizmos.color = Color.lightBlue;
-        Gizmos.DrawWireSphere(transform.position, baitDetectionRadius);
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(center, CohesionDistance);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(center, hunterDetectionRadius);
     }
 
     #endregion

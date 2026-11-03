@@ -32,6 +32,10 @@ public class SteeringAgent : Agent
     [Tooltip("Weight applied to the cohesion steering behavior.")]
     [SerializeField, Range(0f, 3f)] private float cohesionWeight = 1f;
 
+    protected float SeparationDistance => separationDistance;
+    protected float AlignmentDistance => alignmentDistance;
+    protected float CohesionDistance => cohesionDistance;
+
     #region [Unity Events]
 
     protected virtual void Awake()

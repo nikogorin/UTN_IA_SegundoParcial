@@ -120,7 +120,7 @@ MonoBehaviour:
   flockCheckInterval: 0.1
   hunterCheckInterval: 0.075
   baitCheckInterval: 0.3
-  drawGizmos: 0
+  drawGizmos: 1
 --- !u!114 &4002552937222986193
 MonoBehaviour:
   m_ObjectHideFlags: 0
